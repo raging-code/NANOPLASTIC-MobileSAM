@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nanoplastic Detection · Live</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>🔬 NanoPlastic Detector</h1>
+            <div class="subtitle">SAM · Fluorescence · Real‑time Analysis</div>
+        </header>
+
+        <!-- Capture Button & Status -->
+        <div class="capture-bar">
+            <button id="captureBtn" class="capture-btn">📸 Capture & Analyze</button>
+            <div id="captureStatus" class="capture-status"></div>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalSamples">0</div>
+                <div class="stat-label">Total Samples</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avgParticles">0</div>
+                <div class="stat-label">Avg Particles</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="highRiskCount">0</div>
+                <div class="stat-label">High Risk</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="maxParticles">0</div>
+                <div class="stat-label">Max Particles</div>
+            </div>
+        </div>
+
+        <!-- Main Card: Latest Detection + Image -->
+        <div class="main-card">
+            <div class="card-header">
+                <span class="live-badge">● LIVE</span>
+                <span id="timestampDisplay">--:--:--</span>
+            </div>
+            <div class="card-content">
+                <div class="image-preview">
+                    <img id="latestImage" src="" alt="Latest processed frame">
+                    <div id="noImageMessage" class="no-image">Waiting for capture...</div>
+                </div>
+                <div class="metrics">
+                    <div class="metric-row">
+                        <span class="metric-label">Particles</span>
+                        <span id="particleCount" class="metric-value">---</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Concentration</span>
+                        <span id="concentration" class="metric-value">--- µg/L</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Mean Intensity</span>
+                        <span id="intensity" class="metric-value">---</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Confidence (SAM)</span>
+                        <span id="confidence" class="metric-value">---</span>
+                    </div>
+                    <div class="risk-indicator" id="riskDisplay">
+                        <span>Risk Level</span>
+                        <span id="riskLevel" class="risk-value">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Table (now includes Confidence column) -->
+        <div class="history-section">
+            <h3>📋 Detection History</h3>
+            <div class="table-wrapper">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Particles</th>
+                            <th>Conc. (µg/L)</th>
+                            <th>Intensity</th>
+                            <th>Confidence</th>
+                            <th>Risk</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr><td colspan="6" style="text-align:center;">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <footer>
+            <span>Nanoplastic Detection System v2.0 · PC Webcam + SAM</span>
+        </footer>
+    </div>
+
+    <script>
+        const API_BASE = '';
+
+        // Helper: show capture status message
+        function setCaptureStatus(msg, isError = false) {
+            const el = document.getElementById('captureStatus');
+            el.textContent = msg;
+            el.style.color = isError ? '#fca5a5' : '#86efac';
+            if (!isError) {
+                setTimeout(() => {
+                    if (el.textContent === msg) el.textContent = '';
+                }, 5000);
+            }
+        }
+
+        // Trigger async capture and poll for result
+        async function triggerCapture() {
+            const btn = document.getElementById('captureBtn');
+            btn.disabled = true;
+            setCaptureStatus('Starting capture...');
+
+            try {
+                const res = await fetch(`${API_BASE}/trigger_capture`, { method: 'POST' });
+                if (res.status === 202) {
+                    setCaptureStatus('Capture started, processing...');
+                    await pollCaptureStatus();
+                } else {
+                    const err = await res.json();
+                    setCaptureStatus(`Error: ${err.error || 'Unknown'}`, true);
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                setCaptureStatus(`Request failed: ${e.message}`, true);
+                btn.disabled = false;
+            }
+        }
+
+        async function pollCaptureStatus() {
+            let attempts = 0;
+            const maxAttempts = 60; // 5 minutes (5s interval)
+            const interval = setInterval(async () => {
+                try {
+                    const res = await fetch(`${API_BASE}/api/capture_status`);
+                    const data = await res.json();
+                    if (!data.is_processing) {
+                        clearInterval(interval);
+                        document.getElementById('captureBtn').disabled = false;
+                        if (data.last_result) {
+                            setCaptureStatus('✅ Capture complete!');
+                            refreshAll();  // update all UI
+                        } else if (data.error) {
+                            setCaptureStatus(`Failed: ${data.error}`, true);
+                        } else {
+                            setCaptureStatus('No result available', true);
+                        }
+                    } else {
+                        attempts++;
+                        setCaptureStatus(`Processing... (${attempts*5}s)`);
+                        if (attempts >= maxAttempts) {
+                            clearInterval(interval);
+                            document.getElementById('captureBtn').disabled = false;
+                            setCaptureStatus('Timeout - capture took too long', true);
+                        }
+                    }
+                } catch (e) {
+                    clearInterval(interval);
+                    document.getElementById('captureBtn').disabled = false;
+                    setCaptureStatus(`Polling error: ${e.message}`, true);
+                }
+            }, 5000);
+        }
+
+        async function fetchStats() {
+            try {
+                const res = await fetch(`${API_BASE}/api/stats`);
+                const stats = await res.json();
+                document.getElementById('totalSamples').textContent = stats.total_samples || 0;
+                document.getElementById('avgParticles').textContent = stats.avg_particles || 0;
+                document.getElementById('highRiskCount').textContent = stats.high_risk_count || 0;
+                document.getElementById('maxParticles').textContent = stats.max_particles || 0;
+            } catch (e) {
+                console.error('Stats error:', e);
+            }
+        }
+
+        async function fetchLatestImage() {
+            try {
+                const res = await fetch(`${API_BASE}/api/latest_image`);
+                const data = await res.json();
+                const img = document.getElementById('latestImage');
+                const noImgMsg = document.getElementById('noImageMessage');
+                if (data.filename) {
+                    img.src = `/images/processed/${data.filename}?t=${new Date().getTime()}`;
+                    img.style.display = 'block';
+                    noImgMsg.style.display = 'none';
+                } else {
+                    img.style.display = 'none';
+                    noImgMsg.style.display = 'flex';
+                }
+            } catch (e) {
+                console.error('Image fetch error:', e);
+            }
+        }
+
+        async function fetchDetections() {
+            try {
+                const res = await fetch(`${API_BASE}/api/detections`);
+                const detections = await res.json();
+                if (detections.length > 0) {
+                    const latest = detections[detections.length - 1];
+                    document.getElementById('particleCount').textContent = latest.particle_count || 0;
+                    const conc = latest.estimated_concentration_ug_L;
+                    document.getElementById('concentration').innerHTML = conc ? `${conc} µg/L` : '---';
+                    document.getElementById('intensity').textContent = latest.mean_intensity || '---';
+                    document.getElementById('confidence').textContent = latest.avg_confidence ? latest.avg_confidence : '---';
+                    
+                    const risk = latest.risk_level || 'LOW';
+                    const riskEl = document.getElementById('riskLevel');
+                    riskEl.textContent = risk;
+                    riskEl.className = `risk-value ${risk.toLowerCase()}`;
+                    
+                    let timeStr = '--:--:--';
+                    if (latest.timestamp && latest.timestamp.length >= 14) {
+                        timeStr = `${latest.timestamp.substring(8,10)}:${latest.timestamp.substring(10,12)}:${latest.timestamp.substring(12,14)}`;
+                    }
+                    document.getElementById('timestampDisplay').textContent = timeStr;
+                    
+                    const tbody = document.getElementById('historyBody');
+                    const recent = detections.slice(-20).reverse();
+                    if (recent.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No data yet</td></tr>';
+                    } else {
+                        tbody.innerHTML = recent.map(d => {
+                            let time = '--:--:--';
+                            if (d.timestamp && d.timestamp.length >= 14) {
+                                time = `${d.timestamp.substring(8,10)}:${d.timestamp.substring(10,12)}:${d.timestamp.substring(12,14)}`;
+                            }
+                            const riskClass = (d.risk_level || 'low').toLowerCase();
+                            const confidence = d.avg_confidence ? parseFloat(d.avg_confidence).toFixed(2) : '---';
+                            return `<tr>
+                                <td>${time}</td>
+                                <td>${d.particle_count || 0}</td>
+                                <td>${d.estimated_concentration_ug_L || '?'}</td>
+                                <td>${d.mean_intensity || '---'}</td>
+                                <td>${confidence}</td>
+                                <td><span class="risk-badge ${riskClass}">${d.risk_level || 'LOW'}</span></td>
+                            </tr>`;
+                        }).join('');
+                    }
+                } else {
+                    document.getElementById('historyBody').innerHTML = '<tr><td colspan="6" style="text-align:center;">No detections yet</td></tr>';
+                }
+            } catch (e) {
+                console.error('Detections error:', e);
+            }
+        }
+
+        async function refreshAll() {
+            await fetchStats();
+            await fetchLatestImage();
+            await fetchDetections();
+        }
+
+        // Attach event listener to capture button
+        document.getElementById('captureBtn').addEventListener('click', triggerCapture);
+
+        // Initial load and auto-refresh every 5 seconds
+        refreshAll();
+        setInterval(refreshAll, 5000);
+    </script>
+</body>
+</html>

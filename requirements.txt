@@ -1,0 +1,11 @@
+flask>=3.0.0
+flask-cors>=4.0.0
+opencv-python>=4.9.0.80
+numpy>=2.0.0
+pillow>=10.4.0
+werkzeug>=3.0.3
+torch>=2.4.0
+torchvision>=0.19.0
+waitress>=3.0.0
+timm>=1.0.0
+# MobileSAM installed separately: pip install git+https://github.com/ChaoningZhang/MobileSAM.

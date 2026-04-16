@@ -1,0 +1,9 @@
+{
+    "min_particle_area": 5,
+    "brightness_threshold": 30,
+    "max_particles_per_frame": 5000,
+    "intensity_normalization": 255,
+    "jpeg_quality": 85,
+    "laser_warmup_ms": 500,
+    "reaction_time_seconds": 5
+}
