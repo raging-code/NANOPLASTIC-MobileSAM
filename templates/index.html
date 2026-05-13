@@ -3,277 +3,596 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nanoplastic Detection · Live</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
+    <title>USV + Nanoplastic Detection System</title>
+    <!-- Bootstrap 5 CSS + Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Leaflet for USV map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <style>
+        /* ---------- Global & Modern Overrides ---------- */
+        :root {
+            --bg-dark: #0a0e1a;
+            --card-bg: rgba(18, 25, 45, 0.75);
+            --card-border: rgba(56, 189, 248, 0.2);
+            --accent-glow: 0 0 12px rgba(56, 189, 248, 0.3);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+        }
+        body {
+            background: radial-gradient(circle at 10% 20%, #0f172a, var(--bg-dark));
+            color: var(--text-primary);
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        /* Glassmorphism cards */
+        .glass-card {
+            background: rgba(15, 25, 45, 0.65);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: 24px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.5), var(--accent-glow);
+        }
+        .card-header {
+            background: rgba(8, 12, 24, 0.8);
+            border-bottom: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 24px 24px 0 0 !important;
+            padding: 1rem 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+        /* Modern tab style */
+        .nav-tabs {
+            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+            gap: 0.5rem;
+        }
+        .nav-tabs .nav-link {
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding: 0.7rem 1.5rem;
+            border-radius: 40px;
+            transition: all 0.2s;
+            background: rgba(15, 25, 45, 0.5);
+            margin-right: 0.25rem;
+            border: none;
+        }
+        .nav-tabs .nav-link:hover {
+            color: #67e8f9;
+            background: rgba(56, 189, 248, 0.1);
+            transform: translateY(-2px);
+        }
+        .nav-tabs .nav-link.active {
+            color: #0f172a;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            border: none;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+        }
+        /* Metric cards (modern) */
+        .metric-modern {
+            background: rgba(8, 12, 24, 0.6);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 20px;
+            padding: 0.9rem 1rem;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .metric-modern::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #38bdf8, #818cf8, transparent);
+            transition: left 0.4s;
+        }
+        .metric-modern:hover::before { left: 100%; }
+        .metric-modern:hover {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.05);
+            transform: translateY(-2px);
+        }
+        .metric-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        .metric-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #e2e8f0, #a5f3fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            line-height: 1.2;
+        }
+        /* Custom progress bar */
+        .progress-modern {
+            height: 6px;
+            background: #1e293b;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-modern .progress-bar {
+            background: linear-gradient(90deg, #38bdf8, #a855f7);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        /* Bearing visual */
+        .bearing-visual-modern {
+            background: rgba(8, 12, 24, 0.6);
+            border-radius: 20px;
+            padding: 1rem;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+        .bearing-track-modern {
+            position: relative;
+            height: 8px;
+            background: #1e293b;
+            border-radius: 20px;
+            margin: 1rem 0;
+        }
+        .bearing-cursor-modern {
+            position: absolute;
+            top: -12px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 16px solid #fbbf24;
+            filter: drop-shadow(0 2px 6px rgba(251,191,36,0.5));
+            transform: translateX(-50%);
+        }
+        /* Throttle sliders */
+        input[type=range] {
+            width: 100%;
+            height: 5px;
+            -webkit-appearance: none;
+            background: #1e293b;
+            border-radius: 5px;
+            outline: none;
+        }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #a855f7;
+            cursor: pointer;
+            box-shadow: 0 0 8px #a855f7;
+            border: none;
+        }
+        /* Buttons */
+        .btn-glow {
+            transition: all 0.2s;
+            border-radius: 40px;
+            padding: 0.5rem 1.25rem;
+            font-weight: 600;
+        }
+        .btn-glow:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.05);
+            box-shadow: 0 6px 14px rgba(0,0,0,0.3);
+        }
+        /* Map container */
+        .map-container {
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .map { height: 380px; width: 100%; }
+        /* LoRa / GPS status pills */
+        .status-pill {
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            padding: 0.25rem 0.75rem;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-family: monospace;
+        }
+        /* Animations */
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+        }
+        .live-badge {
+            animation: pulse-glow 2s infinite;
+            background: #10b981;
+            border-radius: 20px;
+            padding: 0.2rem 0.75rem;
+            font-size: 0.7rem;
+        }
+    </style>
 </head>
 <body>
-    <div class="app-container">
-        <header>
-            <h1>🔬 NanoPlastic Detector</h1>
-            <div class="subtitle">SAM · Fluorescence · Real‑time Analysis</div>
-        </header>
-
-        <!-- Capture Button & Status -->
-        <div class="capture-bar">
-            <button id="captureBtn" class="capture-btn">📸 Capture & Analyze</button>
-            <div id="captureStatus" class="capture-status"></div>
-        </div>
-
-        <!-- Stats Row -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value" id="totalSamples">0</div>
-                <div class="stat-label">Total Samples</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="avgParticles">0</div>
-                <div class="stat-label">Avg Particles</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="highRiskCount">0</div>
-                <div class="stat-label">High Risk</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="maxParticles">0</div>
-                <div class="stat-label">Max Particles</div>
-            </div>
-        </div>
-
-        <!-- Main Card: Latest Detection + Image -->
-        <div class="main-card">
-            <div class="card-header">
-                <span class="live-badge">● LIVE</span>
-                <span id="timestampDisplay">--:--:--</span>
-            </div>
-            <div class="card-content">
-                <div class="image-preview">
-                    <img id="latestImage" src="" alt="Latest processed frame">
-                    <div id="noImageMessage" class="no-image">Waiting for capture...</div>
-                </div>
-                <div class="metrics">
-                    <div class="metric-row">
-                        <span class="metric-label">Particles</span>
-                        <span id="particleCount" class="metric-value">---</span>
+<div class="container-fluid px-4 py-3">
+    <!-- Bootstrap Tabs centered -->
+    <ul class="nav nav-tabs justify-content-center mb-4" id="mainTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="usv-tab-btn" data-bs-toggle="tab" data-bs-target="#usv" type="button" role="tab">🚤 USV Telemetry & Control</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="nanoplastic-tab-btn" data-bs-toggle="tab" data-bs-target="#nanoplastic" type="button" role="tab">🔬 Nanoplastic Detection</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="hmlog-tab-btn" data-bs-toggle="tab" data-bs-target="#hmlog" type="button" role="tab">🪨 Heavy Metal Log</button>
+        </li>
+    </ul>
+    <div class="tab-content" id="mainTabContent">
+        <!-- ==================== USV TAB (unchanged) ==================== -->
+        <div class="tab-pane fade show active" id="usv" role="tabpanel">
+            <!-- ... (identical to previous USV tab HTML) ... -->
+            <!-- Top status bar -->
+            <div class="row mb-4">
+                <div class="col-12 d-flex flex-wrap gap-3 align-items-center justify-content-between">
+                    <div class="d-flex gap-3">
+                        <div class="status-pill"><i class="bi bi-wifi"></i> <span id="loraStat">---</span></div>
+                        <div class="status-pill"><i class="bi bi-satellite"></i> <span id="gpsStatus">GPS: ---</span></div>
+                        <div class="status-pill"><i class="bi bi-clock"></i> <span id="time">--:--:--</span></div>
                     </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Concentration</span>
-                        <span id="concentration" class="metric-value">--- µg/L</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Mean Intensity</span>
-                        <span id="intensity" class="metric-value">---</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Confidence (SAM)</span>
-                        <span id="confidence" class="metric-value">---</span>
-                    </div>
-                    <div class="risk-indicator" id="riskDisplay">
-                        <span>Risk Level</span>
-                        <span id="riskLevel" class="risk-value">--</span>
-                    </div>
+                    <div class="live-badge"><i class="bi bi-dot"></i> LIVE</div>
                 </div>
             </div>
-        </div>
 
-        <!-- History Table (now includes Confidence column) -->
-        <div class="history-section">
-            <h3>📋 Detection History</h3>
-            <div class="table-wrapper">
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Particles</th>
-                            <th>Conc. (µg/L)</th>
-                            <th>Intensity</th>
-                            <th>Confidence</th>
-                            <th>Risk</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyBody">
-                        <tr><td colspan="6" style="text-align:center;">Loading…</td></tr>
-                    </tbody>
-                </table>
+            <div class="row g-4">
+                <!-- Left: Telemetry Metrics (modern grid) -->
+                <div class="col-lg-7">
+                    <div class="glass-card h-100">
+                        <div class="card-header">
+                            <i class="bi bi-speedometer2 me-2"></i> Live Telemetry
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <!-- Navigation metrics -->
+                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Compass Heading</div><div id="head" class="metric-value">---</div></div></div>
+                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Target Bearing</div><div id="tbrng" class="metric-value">---</div></div></div>
+                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Relative Bearing</div><div id="relBearing" class="metric-value">---</div></div></div>
+                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Steering Error</div><div id="err" class="metric-value">---</div></div></div>
+                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Direction</div><div id="direction" class="metric-value">---</div></div></div>
+                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Turn Intensity</div><div id="intensity" class="metric-value">---</div><div class="progress-modern mt-2"><div id="intensityFill" class="progress-bar" style="width:0%"></div></div></div></div>
+                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Cross-track Error</div><div id="xte" class="metric-value">---</div></div></div>
+                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Dist to Node</div><div id="dist" class="metric-value">---</div></div></div>
+                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Latitude</div><div id="lat" class="metric-value">---</div></div></div>
+                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Longitude</div><div id="lon" class="metric-value">---</div></div></div>
+                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Active Node</div><div id="wp" class="metric-value">---</div></div></div>
+                                <!-- Water quality -->
+                                <div class="col-md-4"><div class="metric-modern"><div class="metric-label">Water Temp</div><div id="waterTemp" class="metric-value">---</div></div></div>
+                                <div class="col-md-4"><div class="metric-modern"><div class="metric-label">Water pH</div><div id="waterPH" class="metric-value">---</div></div></div>
+                                <div class="col-md-4"><div class="metric-modern"><div class="metric-label">Water TDS</div><div id="waterTDS" class="metric-value">---</div></div></div>
+                                <!-- Heavy metal risk -->
+                                <div class="col-12"><div class="metric-modern" style="background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(56,189,248,0.05));"><div class="metric-label">Heavy Metal Risk</div><div id="hmRiskLevel" class="metric-value">---</div><div id="hmRiskScore" class="small text-secondary mt-1">Score: ---</div><div id="hmRiskReasons" class="small text-secondary">---</div></div></div>
+                            </div>
+                            <!-- Bearing visual -->
+                            <div class="bearing-visual-modern mt-4">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="text-secondary"><i class="bi bi-compass"></i> Bearing Indicator</span>
+                                    <span id="bearingRel" class="badge bg-dark">---</span>
+                                </div>
+                                <div id="bearingVisual" class="bearing-track-modern" style="position: relative; height: 8px;"><!-- dynamic cursor --></div>
+                                <div class="d-flex justify-content-between mt-1"><span>← LEFT</span><span id="bearingText" class="fw-bold text-info">STRAIGHT</span><span>RIGHT →</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Map Column -->
+                <div class="col-lg-5">
+                    <div class="glass-card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-map me-2"></i> Track View</span>
+                            <div>
+                                <button class="btn btn-sm btn-outline-info btn-glow" onclick="centerAndZoom()">Center</button>
+                                <button class="btn btn-sm btn-outline-info btn-glow" onclick="zoomToFit()">Fit</button>
+                                <button class="btn btn-sm btn-outline-info btn-glow" onclick="toggleAutoZoom()" id="autoZoomBtn">Auto-Zoom OFF</button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0 map-container"><div id="map" class="map"></div></div>
+                        <div class="p-3 border-top border-secondary"><small class="text-secondary">📍 Click on map to add waypoints | Right‑click on a waypoint to delete/adjust</small></div>
+                    </div>
+                </div>
+
+                <!-- Control Center -->
+                <div class="col-12">
+                    <div class="glass-card">
+                        <div class="card-header"><i class="bi bi-joystick me-2"></i> Control Center</div>
+                        <div class="card-body">
+                            <div class="row g-4">
+                                <div class="col-md-4">
+                                    <div class="d-grid gap-3">
+                                        <button class="btn btn-primary btn-glow" onclick="fetch('/start')"><i class="bi bi-play-fill"></i> Start Mission</button>
+                                        <button class="btn btn-danger btn-glow" onclick="stopReset()"><i class="bi bi-stop-circle"></i> Stop / Reset</button>
+                                        <button class="btn btn-warning btn-glow" onclick="startCalibration()"><i class="bi bi-gear"></i> Calibrate Compass</button>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="bg-dark bg-opacity-25 p-3 rounded-4">
+                                        <div class="form-check form-switch mb-2">
+                                            <input class="form-check-input" type="checkbox" id="servoToggle" onchange="onServoToggle(this.checked)">
+                                            <label class="form-check-label fw-semibold"><i class="bi bi-motherboard"></i> Servo Control</label>
+                                        </div>
+                                        <div id="servoState" class="badge bg-secondary">OFF</div>
+                                    </div>
+                                    <div class="bg-dark bg-opacity-25 p-3 rounded-4 mt-3">
+                                        <label class="fw-semibold"><i class="bi bi-droplet"></i> Pump Rotations</label>
+                                        <input type="number" id="pumpRot" class="form-control form-control-sm bg-dark text-white border-secondary" min="1" max="20" value="1">
+                                        <div class="d-flex gap-2 mt-2">
+                                            <button class="btn btn-sm btn-success btn-glow" onclick="pumpForward()">FWD</button>
+                                            <button class="btn btn-sm btn-warning btn-glow" onclick="pumpReverse()">REV</button>
+                                            <button class="btn btn-sm btn-danger btn-glow" onclick="pumpStop()">STOP</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="bg-dark bg-opacity-25 p-3 rounded-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="syncEnabled" onchange="onSyncToggle(this.checked)">
+                                            <label class="form-check-label fw-semibold"><i class="bi bi-link"></i> Sync Throttle</label>
+                                        </div>
+                                        <label class="mt-2 small text-secondary">Left Throttle (µs)</label>
+                                        <input type="range" class="form-range" min="1000" max="2000" value="1000" id="leftThrottle" oninput="updateLeftThrottle(this.value)">
+                                        <div id="thrLeftVal" class="small text-end text-info">1000 µs</div>
+                                        <label class="mt-2 small text-secondary">Right Throttle (µs)</label>
+                                        <input type="range" class="form-range" min="1000" max="2000" value="1000" id="rightThrottle" oninput="updateRightThrottle(this.value)">
+                                        <div id="thrRightVal" class="small text-end text-info">1000 µs</div>
+                                        <div class="mt-2">Manual Override: <span id="manualOverrideVal" class="badge bg-dark">OFF</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <footer>
-            <span>Nanoplastic Detection System v2.0 · PC Webcam + SAM</span>
-        </footer>
+        <!-- ==================== NANOPLASTIC TAB ==================== -->
+        <div class="tab-pane fade" id="nanoplastic" role="tabpanel">
+            <div class="row mb-4">
+                <div class="col-12 d-flex justify-content-between align-items-center">
+                    <div>
+                        <button id="captureBtn" class="btn btn-primary btn-lg btn-glow"><i class="bi bi-camera me-2"></i> Capture & Analyze</button>
+                        <span id="captureStatus" class="badge bg-secondary ms-3">Ready</span>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-3 mb-4">
+                <div class="col-md-3"><div class="metric-modern"><div class="metric-label">Total Samples</div><div id="totalSamples" class="metric-value">0</div></div></div>
+                <div class="col-md-3"><div class="metric-modern"><div class="metric-label">Avg Particles</div><div id="avgParticles" class="metric-value">0</div></div></div>
+                <div class="col-md-3"><div class="metric-modern"><div class="metric-label">High Risk</div><div id="highRiskCount" class="metric-value">0</div></div></div>
+                <div class="col-md-3"><div class="metric-modern"><div class="metric-label">Max Particles</div><div id="maxParticles" class="metric-value">0</div></div></div>
+            </div>
+            <div class="glass-card mb-4">
+                <div class="card-header"><i class="bi bi-image me-2"></i> Latest Analysis</div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-6 text-center">
+                            <img id="latestImage" src="" class="img-fluid rounded" style="max-height: 320px;">
+                            <div id="noImageMessage" class="text-muted mt-2">Waiting for capture...</div>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-group list-group-flush bg-transparent">
+                                <li class="list-group-item bg-transparent text-white d-flex justify-content-between"><span>Particles Detected</span><span id="particleCount" class="fw-bold">---</span></li>
+                                <li class="list-group-item bg-transparent text-white d-flex justify-content-between"><span>Concentration (µg/L)</span><span id="concentration" class="fw-bold">---</span></li>
+                                <li class="list-group-item bg-transparent text-white d-flex justify-content-between"><span>Mean Intensity</span><span id="intensity" class="fw-bold">---</span></li>
+                                <li class="list-group-item bg-transparent text-white d-flex justify-content-between"><span>Confidence</span><span id="confidence" class="fw-bold">---</span></li>
+                                <li class="list-group-item bg-transparent text-white d-flex justify-content-between"><span>Risk Level</span><span id="riskLevel" class="fw-bold">---</span></li>
+                            </ul>
+                            <!-- hidden span to prevent null error in fetchDetections -->
+                            <span id="timestampDisplay" hidden></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-card">
+                <div class="card-header"><i class="bi bi-clock-history me-2"></i> Detection History</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover mb-0">
+                            <thead><tr><th>Time</th><th>Particles</th><th>Conc.</th><th>Intensity</th><th>Confidence</th><th>Risk</th></tr></thead>
+                            <tbody id="historyBody"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== NEW HEAVY METAL LOG TAB ==================== -->
+        <div class="tab-pane fade" id="hmlog" role="tabpanel">
+            <div class="glass-card">
+                <div class="card-header"><i class="bi bi-file-earmark-bar-graph me-2"></i> Heavy Metal Sensor Log (auto-saved every 5 min)</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                        <table class="table table-dark table-hover mb-0">
+                            <thead><tr><th>Date</th><th>Time</th><th>TDS (ppm)</th><th>pH</th><th>Temp (°C)</th><th>Risk</th></tr></thead>
+                            <tbody id="hmLogBody"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+</div>
 
-    <script>
-        const API_BASE = '';
+<!-- Bootstrap JS for tabs -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 
-        // Helper: show capture status message
-        function setCaptureStatus(msg, isError = false) {
-            const el = document.getElementById('captureStatus');
-            el.textContent = msg;
-            el.style.color = isError ? '#fca5a5' : '#86efac';
-            if (!isError) {
-                setTimeout(() => {
-                    if (el.textContent === msg) el.textContent = '';
-                }, 5000);
+<script>
+    // ==================== GLOBAL VARIABLES & HELPERS (unchanged logic) ====================
+    let usvMap = null;
+    let usvIcon = null, route = null, targetLine = null, waypointMarkers = [];
+    let autoZoomEnabled = false, lastZoomPosition = null, initialZoomDone = false;
+    let throttleDragging = false, throttleHoldTimer = null;
+
+    function holdThrottleUi() { throttleDragging = true; if(throttleHoldTimer) clearTimeout(throttleHoldTimer); throttleHoldTimer = setTimeout(()=>{ throttleDragging = false; }, 700); }
+    function centerAndZoom(zoomLevel) { let lat = parseFloat(document.getElementById('lat').innerText); let lng = parseFloat(document.getElementById('lon').innerText); if(lat && lng && lat!=0 && lng!=0) { let zoom = zoomLevel||19; usvMap.setView([lat,lng], zoom); return true; } return false; }
+    function zoomToFit() { let bounds = []; let hasPoints = false; let lat = parseFloat(document.getElementById('lat').innerText); let lng = parseFloat(document.getElementById('lon').innerText); if(lat && lng && lat!=0 && lng!=0) { bounds.push([lat,lng]); hasPoints=true; } waypointMarkers.forEach(m=>{ let ll=m.getLatLng(); bounds.push([ll.lat,ll.lng]); hasPoints=true; }); if(hasPoints) usvMap.fitBounds(bounds, {padding:[50,50]}); }
+    function toggleAutoZoom() { autoZoomEnabled = !autoZoomEnabled; let btn = document.getElementById('autoZoomBtn'); btn.innerText = autoZoomEnabled ? "Auto-Zoom ON" : "Auto-Zoom OFF"; if(autoZoomEnabled) centerAndZoom(19); }
+    function startCalibration() { if(confirm('Start compass calibration? Rotate robot for 30 seconds.')) fetch('/calibrate').then(()=>alert('Calibration started. Rotate robot.')); }
+    function stopReset() { fetch('/clear').then(()=>{ route.setLatLngs([]); targetLine.setLatLngs([]); waypointMarkers.forEach(m=>usvMap.removeLayer(m)); waypointMarkers=[]; updatePath(); updateWaypointMarkers(); }); }
+    function updatePath() { fetch('/path').then(r=>r.json()).then(d=>{ route.setLatLngs(d.map(p=>[p.lat,p.lng])); }); }
+    function updateWaypointMarkers() { waypointMarkers.forEach(m=>usvMap.removeLayer(m)); waypointMarkers=[]; fetch('/path').then(r=>r.json()).then(d=>{ d.forEach((wp,idx)=>{ let m = L.circleMarker([wp.lat,wp.lng], {radius:5, color:'#00e676', fillOpacity:0.8}).bindTooltip(`WP ${idx+1}`).addTo(usvMap); waypointMarkers.push(m); }); }); }
+    function createBearingVisual(relBearing) { 
+        let val = (typeof relBearing === 'number' && isFinite(relBearing)) ? relBearing : 0; 
+        let clamped = Math.min(Math.max(val,-180),180); 
+        let posPct = ((clamped+180)/360)*100; 
+        let dir = clamped>4 ? 'RIGHT' : (clamped<-4 ? 'LEFT' : 'STRAIGHT');
+        let cursorHtml = `<div class="bearing-cursor-modern" style="left: ${posPct}%;"></div>`;
+        document.getElementById('bearingVisual').innerHTML = cursorHtml;
+        document.getElementById('bearingRel').innerHTML = clamped.toFixed(0)+'°';
+        document.getElementById('bearingText').innerHTML = dir;
+        return cursorHtml;
+    }
+    function isSyncEnabled() { return document.getElementById('syncEnabled').checked; }
+    function onSyncToggle(checked) { if(checked) updateSyncThrottle(document.getElementById('leftThrottle').value); }
+    function onServoToggle(checked) { fetch("/servo?value="+(checked?1:0)); document.getElementById('servoState').innerText = checked ? "ON" : "OFF"; }
+    function getPumpRot() { let v = parseInt(document.getElementById('pumpRot').value); if(isNaN(v)||v<1) v=1; if(v>20) v=20; document.getElementById('pumpRot').value=v; return v; }
+    function pumpForward() { fetch("/pump?dir=fwd&rot="+getPumpRot()); }
+    function pumpReverse() { fetch("/pump?dir=rev&rot="+getPumpRot()); }
+    function pumpStop() { fetch("/pump?dir=stop"); }
+    function updateSyncThrottle(val) { holdThrottleUi(); let v=parseInt(val); document.getElementById('leftThrottle').value=v; document.getElementById('rightThrottle').value=v; document.getElementById('thrLeftVal').innerText=v+" µs"; document.getElementById('thrRightVal').innerText=v+" µs"; fetch("/set-sync?value="+v); }
+    function updateLeftThrottle(val) { holdThrottleUi(); let v=parseInt(val); document.getElementById('thrLeftVal').innerText=v+" µs"; if(isSyncEnabled()) updateSyncThrottle(v); else fetch("/set-left?value="+v); }
+    function updateRightThrottle(val) { holdThrottleUi(); let v=parseInt(val); document.getElementById('thrRightVal').innerText=v+" µs"; if(isSyncEnabled()) updateSyncThrottle(v); else fetch("/set-right?value="+v); }
+
+    // ==================== USV MAP INIT ====================
+    if(document.getElementById('map')) {
+        usvMap = L.map('map').setView([14.5915,121.0965],18);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:21}).addTo(usvMap);
+        usvIcon = L.circleMarker([0,0], {radius:7, color:'#ff1744', fillOpacity:1, weight:3}).addTo(usvMap);
+        route = L.polyline([], {color:'#00e676', weight:3}).addTo(usvMap);
+        targetLine = L.polyline([], {color:'#d29922', weight:2, dashArray:'5,10'}).addTo(usvMap);
+        usvMap.on('click', e=>{ fetch(`/addWP?lat=${e.latlng.lat}&lng=${e.latlng.lng}`).then(()=>{ updateWaypointMarkers(); updatePath(); }); });
+        updatePath(); updateWaypointMarkers();
+    }
+
+    // ==================== USV DATA POLLING ====================
+    setInterval(() => {
+        fetch('/data').then(r=>r.json()).then(d=>{
+            let hasFix = (d.gpsValid==1) || (d.lat!=0 && d.lng!=0);
+            if(hasFix) { document.getElementById('lat').innerText = d.lat.toFixed(6); document.getElementById('lon').innerText = d.lng.toFixed(6); }
+            else { document.getElementById('lat').innerText = '---'; document.getElementById('lon').innerText = '---'; }
+            document.getElementById('head').innerText = d.head.toFixed(1)+"°";
+            document.getElementById('tbrng').innerText = d.tbrng.toFixed(1)+"°";
+            document.getElementById('relBearing').innerText = d.relBearing.toFixed(1)+"°";
+            document.getElementById('dist').innerText = d.dist.toFixed(1)+"m";
+            document.getElementById('wp').innerText = "Node "+(d.wp+1);
+            document.getElementById('direction').innerHTML = d.direction;
+            let inten = d.intensity||0; document.getElementById('intensity').innerHTML = inten+"%"; document.getElementById('intensityFill').style.width = inten+"%";
+            document.getElementById('xte').innerHTML = d.xte.toFixed(1)+"m";
+            document.getElementById('waterTemp').innerHTML = d.waterTemp? d.waterTemp.toFixed(2)+" °C" : "---";
+            document.getElementById('waterPH').innerHTML = d.waterPH? d.waterPH.toFixed(2) : "---";
+            document.getElementById('waterTDS').innerHTML = d.waterTDS? Math.round(d.waterTDS)+" ppm" : "---";
+            if(d.hmRiskLevel) document.getElementById('hmRiskLevel').innerHTML = d.hmRiskLevel;
+            if(d.hmRiskScore) document.getElementById('hmRiskScore').innerHTML = "Score: "+d.hmRiskScore+"/100";
+            if(d.hmRiskReasons) document.getElementById('hmRiskReasons').innerHTML = d.hmRiskReasons.join(' | ');
+            let error = d.tbrng - d.head; if(error>180) error-=360; if(error<-180) error+=360;
+            document.getElementById('err').innerHTML = error.toFixed(1)+"°";
+            document.getElementById('time').innerHTML = new Date().toLocaleTimeString();
+            createBearingVisual(d.relBearing);
+            if(d.thrL) { document.getElementById('thrLeftVal').innerText = d.thrL+" µs"; document.getElementById('leftThrottle').value = d.thrL; }
+            if(d.thrR) { document.getElementById('thrRightVal').innerText = d.thrR+" µs"; document.getElementById('rightThrottle').value = d.thrR; }
+            if(d.manual) document.getElementById('manualOverrideVal').innerText = d.manual?"ON":"OFF";
+            if(d.servoOn !== undefined) document.getElementById('servoToggle').checked = (d.servoOn==1);
+            if(hasFix) {
+                usvIcon.setLatLng([d.lat,d.lng]);
+                if(autoZoomEnabled) centerAndZoom(19);
+                else if(!initialZoomDone && d.lat!=0) { centerAndZoom(18); initialZoomDone=true; }
+                if(d.tbrng>0 && d.wp>=0) fetch('/path').then(r=>r.json()).then(pathData=>{ if(pathData[d.wp]) targetLine.setLatLngs([[d.lat,d.lng],[pathData[d.wp].lat,pathData[d.wp].lng]]); });
             }
-        }
+            let loraText = (d.rxAge && d.rxAge<2000) ? `LoRa: OK (${d.rxAge}ms)` : 'LoRa: LOST';
+            document.getElementById('loraStat').innerText = loraText;
+            let gpsText = hasFix ? `GPS: FIXED (${d.gpsSats||0} sat)` : 'GPS: NO FIX';
+            document.getElementById('gpsStatus').innerText = gpsText;
+        }).catch(e=>console.warn);
+    }, 500);
 
-        // Trigger async capture and poll for result
-        async function triggerCapture() {
-            const btn = document.getElementById('captureBtn');
-            btn.disabled = true;
-            setCaptureStatus('Starting capture...');
-
+    // ==================== NANOPLASTIC DETECTION SCRIPT (unchanged, but safe) ====================
+    const API_BASE = '';
+    function setCaptureStatus(msg, isError=false) { let el = document.getElementById('captureStatus'); if(!el) return; el.innerText = msg; el.className = 'badge '+(isError?'bg-danger':'bg-secondary'); if(!isError) setTimeout(()=>{ if(el.innerText===msg) el.innerText='Ready'; }, 5000); }
+    async function triggerCapture() {
+        let btn = document.getElementById('captureBtn'); if(!btn) return;
+        btn.disabled = true; setCaptureStatus('Starting capture...');
+        try {
+            let res = await fetch(`${API_BASE}/trigger_capture`, {method:'POST'});
+            if(res.status===202) { setCaptureStatus('Capture started, processing...'); await pollCaptureStatus(); }
+            else { let err = await res.json(); setCaptureStatus(`Error: ${err.error||'Unknown'}`, true); btn.disabled = false; }
+        } catch(e) { setCaptureStatus(`Request failed: ${e.message}`, true); btn.disabled = false; }
+    }
+    async function pollCaptureStatus() {
+        let attempts=0, maxAttempts=60;
+        let interval = setInterval(async ()=>{
             try {
-                const res = await fetch(`${API_BASE}/trigger_capture`, { method: 'POST' });
-                if (res.status === 202) {
-                    setCaptureStatus('Capture started, processing...');
-                    await pollCaptureStatus();
-                } else {
-                    const err = await res.json();
-                    setCaptureStatus(`Error: ${err.error || 'Unknown'}`, true);
-                    btn.disabled = false;
-                }
-            } catch (e) {
-                setCaptureStatus(`Request failed: ${e.message}`, true);
-                btn.disabled = false;
-            }
-        }
-
-        async function pollCaptureStatus() {
-            let attempts = 0;
-            const maxAttempts = 60; // 5 minutes (5s interval)
-            const interval = setInterval(async () => {
-                try {
-                    const res = await fetch(`${API_BASE}/api/capture_status`);
-                    const data = await res.json();
-                    if (!data.is_processing) {
-                        clearInterval(interval);
-                        document.getElementById('captureBtn').disabled = false;
-                        if (data.last_result) {
-                            setCaptureStatus('✅ Capture complete!');
-                            refreshAll();  // update all UI
-                        } else if (data.error) {
-                            setCaptureStatus(`Failed: ${data.error}`, true);
-                        } else {
-                            setCaptureStatus('No result available', true);
-                        }
-                    } else {
-                        attempts++;
-                        setCaptureStatus(`Processing... (${attempts*5}s)`);
-                        if (attempts >= maxAttempts) {
-                            clearInterval(interval);
-                            document.getElementById('captureBtn').disabled = false;
-                            setCaptureStatus('Timeout - capture took too long', true);
-                        }
-                    }
-                } catch (e) {
+                let res = await fetch(`${API_BASE}/api/capture_status`);
+                let data = await res.json();
+                if(!data.is_processing) {
                     clearInterval(interval);
                     document.getElementById('captureBtn').disabled = false;
-                    setCaptureStatus(`Polling error: ${e.message}`, true);
-                }
-            }, 5000);
-        }
+                    if(data.last_result) { setCaptureStatus('✅ Capture complete!'); refreshAll(); }
+                    else if(data.error) setCaptureStatus(`Failed: ${data.error}`, true);
+                    else setCaptureStatus('No result', true);
+                } else { attempts++; setCaptureStatus(`Processing... (${attempts*5}s)`); if(attempts>=maxAttempts) { clearInterval(interval); document.getElementById('captureBtn').disabled=false; setCaptureStatus('Timeout', true); } }
+            } catch(e) { clearInterval(interval); document.getElementById('captureBtn').disabled=false; setCaptureStatus(`Poll error: ${e.message}`, true); }
+        }, 5000);
+    }
+    async function fetchStats() {
+        try { let res = await fetch(`${API_BASE}/api/stats`); let stats = await res.json(); document.getElementById('totalSamples').innerText = stats.total_samples||0; document.getElementById('avgParticles').innerText = stats.avg_particles||0; document.getElementById('highRiskCount').innerText = stats.high_risk_count||0; document.getElementById('maxParticles').innerText = stats.max_particles||0; } catch(e) { console.warn(e); }
+    }
+    async function fetchLatestImage() {
+        try { let res = await fetch(`${API_BASE}/api/latest_image`); let data = await res.json(); let img = document.getElementById('latestImage'); let noImg = document.getElementById('noImageMessage'); if(data.filename) { img.src = `/images/processed/${data.filename}?t=${Date.now()}`; img.style.display='block'; if(noImg) noImg.style.display='none'; } else { img.style.display='none'; if(noImg) noImg.style.display='block'; } } catch(e) { console.warn(e); }
+    }
+    async function fetchDetections() {
+        try {
+            let res = await fetch(`${API_BASE}/api/detections`);
+            let detections = await res.json();
+            if(detections.length>0) {
+                let latest = detections[detections.length-1];
+                document.getElementById('particleCount').innerText = latest.particle_count||0;
+                document.getElementById('concentration').innerHTML = latest.estimated_concentration_ug_L ? latest.estimated_concentration_ug_L+" µg/L" : '---';
+                document.getElementById('intensity').innerText = latest.mean_intensity||'---';
+                document.getElementById('confidence').innerText = latest.avg_confidence||'---';
+                let risk = latest.risk_level||'LOW'; let riskEl = document.getElementById('riskLevel'); riskEl.innerText = risk; riskEl.className = `fw-bold text-${risk==='HIGH'?'danger':risk==='MEDIUM'?'warning':'success'}`;
+                // timestampDisplay no longer needed but we keep it for safety
+                let timeStr = latest.timestamp ? latest.timestamp.substr(8,6).replace(/(..)(..)(..)/,'$1:$2:$3') : '--:--:--';
+                let tsEl = document.getElementById('timestampDisplay');
+                if(tsEl) tsEl.innerText = timeStr;
+                let tbody = document.getElementById('historyBody');
+                let recent = detections.slice(-20).reverse();
+                if(recent.length===0) tbody.innerHTML = '<tr><td colspan="6" class="text-center">No data yet</td></tr>';
+                else tbody.innerHTML = recent.map(d=>{ let t = d.timestamp ? d.timestamp.substr(8,6).replace(/(..)(..)(..)/,'$1:$2:$3') : '--:--:--'; let riskClass = (d.risk_level||'low').toLowerCase(); return `<tr><td>${t}</td><td>${d.particle_count||0}</td><td>${d.estimated_concentration_ug_L||'?'}</td><td>${d.mean_intensity||'---'}</td><td>${d.avg_confidence||'---'}</td><td><span class="badge bg-${riskClass==='high'?'danger':riskClass==='medium'?'warning':'success'}">${d.risk_level||'LOW'}</span></td></tr>`; }).join('');
+            } else { document.getElementById('historyBody').innerHTML = '<tr><td colspan="6" class="text-center">No detections yet</td></tr>'; }
+        } catch(e) { console.warn(e); }
+    }
+    async function refreshAll() { await fetchStats(); await fetchLatestImage(); await fetchDetections(); }
+    document.getElementById('captureBtn')?.addEventListener('click', triggerCapture);
+    refreshAll();
+    setInterval(refreshAll, 5000);
 
-        async function fetchStats() {
-            try {
-                const res = await fetch(`${API_BASE}/api/stats`);
-                const stats = await res.json();
-                document.getElementById('totalSamples').textContent = stats.total_samples || 0;
-                document.getElementById('avgParticles').textContent = stats.avg_particles || 0;
-                document.getElementById('highRiskCount').textContent = stats.high_risk_count || 0;
-                document.getElementById('maxParticles').textContent = stats.max_particles || 0;
-            } catch (e) {
-                console.error('Stats error:', e);
+    // ==================== HEAVY METAL LOG ====================
+    async function fetchHeavyMetalLog() {
+        try {
+            let res = await fetch(`${API_BASE}/api/heavy_metal_log`);
+            let data = await res.json();
+            let tbody = document.getElementById('hmLogBody');
+            if(!data || data.length===0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No log entries yet</td></tr>';
+                return;
             }
-        }
-
-        async function fetchLatestImage() {
-            try {
-                const res = await fetch(`${API_BASE}/api/latest_image`);
-                const data = await res.json();
-                const img = document.getElementById('latestImage');
-                const noImgMsg = document.getElementById('noImageMessage');
-                if (data.filename) {
-                    img.src = `/images/processed/${data.filename}?t=${new Date().getTime()}`;
-                    img.style.display = 'block';
-                    noImgMsg.style.display = 'none';
-                } else {
-                    img.style.display = 'none';
-                    noImgMsg.style.display = 'flex';
-                }
-            } catch (e) {
-                console.error('Image fetch error:', e);
-            }
-        }
-
-        async function fetchDetections() {
-            try {
-                const res = await fetch(`${API_BASE}/api/detections`);
-                const detections = await res.json();
-                if (detections.length > 0) {
-                    const latest = detections[detections.length - 1];
-                    document.getElementById('particleCount').textContent = latest.particle_count || 0;
-                    const conc = latest.estimated_concentration_ug_L;
-                    document.getElementById('concentration').innerHTML = conc ? `${conc} µg/L` : '---';
-                    document.getElementById('intensity').textContent = latest.mean_intensity || '---';
-                    document.getElementById('confidence').textContent = latest.avg_confidence ? latest.avg_confidence : '---';
-                    
-                    const risk = latest.risk_level || 'LOW';
-                    const riskEl = document.getElementById('riskLevel');
-                    riskEl.textContent = risk;
-                    riskEl.className = `risk-value ${risk.toLowerCase()}`;
-                    
-                    let timeStr = '--:--:--';
-                    if (latest.timestamp && latest.timestamp.length >= 14) {
-                        timeStr = `${latest.timestamp.substring(8,10)}:${latest.timestamp.substring(10,12)}:${latest.timestamp.substring(12,14)}`;
-                    }
-                    document.getElementById('timestampDisplay').textContent = timeStr;
-                    
-                    const tbody = document.getElementById('historyBody');
-                    const recent = detections.slice(-20).reverse();
-                    if (recent.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No data yet</td></tr>';
-                    } else {
-                        tbody.innerHTML = recent.map(d => {
-                            let time = '--:--:--';
-                            if (d.timestamp && d.timestamp.length >= 14) {
-                                time = `${d.timestamp.substring(8,10)}:${d.timestamp.substring(10,12)}:${d.timestamp.substring(12,14)}`;
-                            }
-                            const riskClass = (d.risk_level || 'low').toLowerCase();
-                            const confidence = d.avg_confidence ? parseFloat(d.avg_confidence).toFixed(2) : '---';
-                            return `<tr>
-                                <td>${time}</td>
-                                <td>${d.particle_count || 0}</td>
-                                <td>${d.estimated_concentration_ug_L || '?'}</td>
-                                <td>${d.mean_intensity || '---'}</td>
-                                <td>${confidence}</td>
-                                <td><span class="risk-badge ${riskClass}">${d.risk_level || 'LOW'}</span></td>
-                            </tr>`;
-                        }).join('');
-                    }
-                } else {
-                    document.getElementById('historyBody').innerHTML = '<tr><td colspan="6" style="text-align:center;">No detections yet</td></tr>';
-                }
-            } catch (e) {
-                console.error('Detections error:', e);
-            }
-        }
-
-        async function refreshAll() {
-            await fetchStats();
-            await fetchLatestImage();
-            await fetchDetections();
-        }
-
-        // Attach event listener to capture button
-        document.getElementById('captureBtn').addEventListener('click', triggerCapture);
-
-        // Initial load and auto-refresh every 5 seconds
-        refreshAll();
-        setInterval(refreshAll, 5000);
-    </script>
+            let rows = data.map(r=>`<tr><td>${r.Date}</td><td>${r.Time}</td><td>${r['TDS (ppm)']}</td><td>${r.pH}</td><td>${r['Temp (°C)']}</td><td>${r.Risk}</td></tr>`).join('');
+            tbody.innerHTML = rows;
+        } catch(e) { console.warn(e); }
+    }
+    fetchHeavyMetalLog();
+    setInterval(fetchHeavyMetalLog, 30000);  // refresh every 30 seconds
+</script>
 </body>
 </html>

@@ -8,4 +8,6 @@ torch>=2.4.0
 torchvision>=0.19.0
 waitress>=3.0.0
 timm>=1.0.0
-# MobileSAM installed separately: pip install git+https://github.com/ChaoningZhang/MobileSAM.
+pyserial>=3.5
+requests>=2.31.0
+# MobileSAM installed separately: pip install git+https://github.com/ChaoningZhang/MobileSAM
