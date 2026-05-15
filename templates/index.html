@@ -1,598 +1,1194 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>USV + Nanoplastic Detection System</title>
-    <!-- Bootstrap 5 CSS + Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <!-- Leaflet for USV map -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
-    <style>
-        /* ---------- Global & Modern Overrides ---------- */
-        :root {
-            --bg-dark: #0a0e1a;
-            --card-bg: rgba(18, 25, 45, 0.75);
-            --card-border: rgba(56, 189, 248, 0.2);
-            --accent-glow: 0 0 12px rgba(56, 189, 248, 0.3);
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-        }
-        body {
-            background: radial-gradient(circle at 10% 20%, #0f172a, var(--bg-dark));
-            color: var(--text-primary);
-            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-        }
-        /* Glassmorphism cards */
-        .glass-card {
-            background: rgba(15, 25, 45, 0.65);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(56, 189, 248, 0.25);
-            border-radius: 24px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .glass-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.5), var(--accent-glow);
-        }
-        .card-header {
-            background: rgba(8, 12, 24, 0.8);
-            border-bottom: 1px solid rgba(56, 189, 248, 0.3);
-            border-radius: 24px 24px 0 0 !important;
-            padding: 1rem 1.25rem;
-            font-weight: 600;
-            letter-spacing: -0.01em;
-        }
-        /* Modern tab style */
-        .nav-tabs {
-            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
-            gap: 0.5rem;
-        }
-        .nav-tabs .nav-link {
-            color: var(--text-secondary);
-            font-weight: 600;
-            padding: 0.7rem 1.5rem;
-            border-radius: 40px;
-            transition: all 0.2s;
-            background: rgba(15, 25, 45, 0.5);
-            margin-right: 0.25rem;
-            border: none;
-        }
-        .nav-tabs .nav-link:hover {
-            color: #67e8f9;
-            background: rgba(56, 189, 248, 0.1);
-            transform: translateY(-2px);
-        }
-        .nav-tabs .nav-link.active {
-            color: #0f172a;
-            background: linear-gradient(135deg, #38bdf8, #818cf8);
-            border: none;
-            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
-        }
-        /* Metric cards (modern) */
-        .metric-modern {
-            background: rgba(8, 12, 24, 0.6);
-            border: 1px solid rgba(56, 189, 248, 0.2);
-            border-radius: 20px;
-            padding: 0.9rem 1rem;
-            transition: all 0.2s;
-            position: relative;
-            overflow: hidden;
-        }
-        .metric-modern::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #38bdf8, #818cf8, transparent);
-            transition: left 0.4s;
-        }
-        .metric-modern:hover::before { left: 100%; }
-        .metric-modern:hover {
-            border-color: #38bdf8;
-            background: rgba(56, 189, 248, 0.05);
-            transform: translateY(-2px);
-        }
-        .metric-label {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-        }
-        .metric-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.4rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #e2e8f0, #a5f3fc);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            line-height: 1.2;
-        }
-        /* Custom progress bar */
-        .progress-modern {
-            height: 6px;
-            background: #1e293b;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .progress-modern .progress-bar {
-            background: linear-gradient(90deg, #38bdf8, #a855f7);
-            border-radius: 10px;
-            transition: width 0.3s ease;
-        }
-        /* Bearing visual */
-        .bearing-visual-modern {
-            background: rgba(8, 12, 24, 0.6);
-            border-radius: 20px;
-            padding: 1rem;
-            border: 1px solid rgba(56, 189, 248, 0.2);
-        }
-        .bearing-track-modern {
-            position: relative;
-            height: 8px;
-            background: #1e293b;
-            border-radius: 20px;
-            margin: 1rem 0;
-        }
-        .bearing-cursor-modern {
-            position: absolute;
-            top: -12px;
-            width: 0;
-            height: 0;
-            border-left: 8px solid transparent;
-            border-right: 8px solid transparent;
-            border-bottom: 16px solid #fbbf24;
-            filter: drop-shadow(0 2px 6px rgba(251,191,36,0.5));
-            transform: translateX(-50%);
-        }
-        /* Throttle sliders */
-        input[type=range] {
-            width: 100%;
-            height: 5px;
-            -webkit-appearance: none;
-            background: #1e293b;
-            border-radius: 5px;
-            outline: none;
-        }
-        input[type=range]:focus { outline: none; }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: #a855f7;
-            cursor: pointer;
-            box-shadow: 0 0 8px #a855f7;
-            border: none;
-        }
-        /* Buttons */
-        .btn-glow {
-            transition: all 0.2s;
-            border-radius: 40px;
-            padding: 0.5rem 1.25rem;
-            font-weight: 600;
-        }
-        .btn-glow:hover {
-            transform: translateY(-2px);
-            filter: brightness(1.05);
-            box-shadow: 0 6px 14px rgba(0,0,0,0.3);
-        }
-        /* Map container */
-        .map-container {
-            border-radius: 20px;
-            overflow: hidden;
-            border: 1px solid rgba(56, 189, 248, 0.4);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-        }
-        .map { height: 380px; width: 100%; }
-        /* LoRa / GPS status pills */
-        .status-pill {
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(4px);
-            padding: 0.25rem 0.75rem;
-            border-radius: 40px;
-            font-size: 0.8rem;
-            font-family: monospace;
-        }
-        /* Animations */
-        @keyframes pulse-glow {
-            0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
-        }
-        .live-badge {
-            animation: pulse-glow 2s infinite;
-            background: #10b981;
-            border-radius: 20px;
-            padding: 0.2rem 0.75rem;
-            font-size: 0.7rem;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>AquaScan · USV Command</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root {
+      --bg:           #040812;
+      --surface:      #070d1c;
+      --glass:        rgba(9, 16, 34, 0.75);
+      --glass-light:  rgba(14, 24, 50, 0.6);
+      --panel:        rgba(10, 18, 38, 0.9);
+      --border:       rgba(0, 210, 185, 0.12);
+      --border-dim:   rgba(255, 255, 255, 0.055);
+      --border-glow:  rgba(0, 210, 185, 0.35);
+      --teal:         #00d4b8;
+      --teal-dim:     rgba(0, 212, 184, 0.07);
+      --teal-glow:    rgba(0, 212, 184, 0.25);
+      --teal-bright:  #2fffd8;
+      --indigo:       #6366f1;
+      --indigo-dim:   rgba(99, 102, 241, 0.08);
+      --amber:        #f59e0b;
+      --amber-dim:    rgba(245, 158, 11, 0.1);
+      --rose:         #f43f5e;
+      --rose-dim:     rgba(244, 63, 94, 0.1);
+      --emerald:      #10b981;
+      --emerald-dim:  rgba(16, 185, 129, 0.1);
+      --text:         #f0f7ff;
+      --text-sub:     #8aacbf;
+      --text-dim:     #4e6e85;
+      --mono:         'JetBrains Mono', monospace;
+      --ui:           'DM Sans', sans-serif;
+      --brand:        'Exo 2', sans-serif;
+      --sidebar-w:    230px;
+      --topbar-h:     60px;
+      --mobtab-h:     56px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; }
+
+    body {
+      font-family: var(--ui);
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100%;
+      overflow: hidden;
+    }
+
+    /* ── LAYERED BACKGROUND ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 75% -10%, rgba(0, 212, 184, 0.055) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at -10% 60%, rgba(99, 102, 241, 0.05) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 50% at 50% 110%, rgba(0, 80, 120, 0.12) 0%, transparent 60%);
+    }
+
+    /* Subtle dot grid */
+    body::after {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image: radial-gradient(circle, rgba(0, 212, 184, 0.08) 1px, transparent 1px);
+      background-size: 32px 32px;
+      mask-image: radial-gradient(ellipse 100% 100% at 50% 0%, black 20%, transparent 80%);
+    }
+
+    /* ── SHELL ── */
+    #shell {
+      position: relative; z-index: 1;
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      grid-template-rows: var(--topbar-h) 1fr;
+      height: 100vh;
+    }
+
+    /* ── TOPBAR ── */
+    #topbar {
+      grid-column: 1 / -1;
+      display: flex; align-items: center; gap: 1rem;
+      padding: 0 1.5rem;
+      background: rgba(5, 10, 22, 0.9);
+      border-bottom: 1px solid var(--border);
+      position: relative; z-index: 10;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    #topbar::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent 0%, var(--teal) 30%, var(--indigo) 70%, transparent 100%);
+      opacity: 0.4;
+    }
+
+    .brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+    .brand-icon {
+      width: 36px; height: 36px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--teal), #007a6e);
+      border-radius: 9px; display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; color: var(--bg);
+      box-shadow: 0 0 20px var(--teal-glow), inset 0 1px 0 rgba(255,255,255,0.2);
+      position: relative;
+    }
+    .brand-icon::after {
+      content: ''; position: absolute; inset: 0; border-radius: 9px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+    }
+    .brand-name {
+      font-family: var(--brand); font-weight: 800; font-size: 1.3rem;
+      letter-spacing: 0.02em; color: #fff; line-height: 1;
+    }
+    .brand-sub {
+      font-family: var(--mono); font-size: 0.6rem; color: var(--teal);
+      letter-spacing: 0.16em; text-transform: uppercase; margin-top: 3px; opacity: 0.9;
+    }
+
+    .topbar-divider { width: 1px; height: 28px; background: var(--border-dim); margin: 0 0.25rem; }
+
+    .topbar-chips { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-family: var(--mono); font-size: 0.72rem; color: var(--text-sub);
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim);
+      border-radius: 6px; padding: 0.32rem 0.75rem; white-space: nowrap;
+      letter-spacing: 0.03em; transition: all 0.15s;
+    }
+    .chip:hover { border-color: var(--border); color: var(--text); }
+    .chip i { font-size: 0.72rem; color: var(--teal); }
+
+    .live-pill {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: rgba(16, 185, 129, 0.07); border: 1px solid rgba(16, 185, 129, 0.22);
+      border-radius: 6px; padding: 0.32rem 0.85rem;
+      font-family: var(--mono); font-size: 0.72rem;
+      color: var(--emerald); font-weight: 600; letter-spacing: 0.1em;
+    }
+    .dot-pulse {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--emerald); flex-shrink: 0;
+      box-shadow: 0 0 10px var(--emerald);
+      animation: dot-anim 2s ease-in-out infinite;
+    }
+    @keyframes dot-anim { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.35;transform:scale(.65);} }
+
+    /* ── SIDEBAR ── */
+    #sidebar {
+      background: rgba(5, 10, 22, 0.85);
+      border-right: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      display: flex; flex-direction: column; padding: 1.25rem 0.85rem; gap: 0.15rem;
+      position: relative;
+    }
+    #sidebar::after {
+      content: ''; position: absolute; top: 0; right: 0; width: 1px; bottom: 0;
+      background: linear-gradient(180deg, transparent, var(--teal) 40%, var(--indigo) 70%, transparent);
+      opacity: 0.2;
+    }
+
+    .nav-section-label {
+      font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-sub);
+      padding: 0.6rem 0.75rem 0.3rem; margin-top: 0.4rem;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 0.7rem;
+      padding: 0.65rem 0.85rem; border-radius: 8px;
+      font-size: 0.92rem; font-weight: 600; color: var(--text-sub);
+      cursor: pointer; border: 1px solid transparent; transition: all 0.2s; position: relative;
+      letter-spacing: 0.01em;
+    }
+    .nav-item .nav-icon {
+      width: 28px; height: 28px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border-dim);
+      font-size: 0.85rem; flex-shrink: 0; transition: all 0.2s;
+    }
+    .nav-item:hover { background: var(--teal-dim); color: var(--text); border-color: var(--border); }
+    .nav-item:hover .nav-icon { background: var(--teal-dim); border-color: var(--border); color: var(--teal); }
+    .nav-item.active { background: var(--teal-dim); color: var(--teal); border-color: var(--border); }
+    .nav-item.active .nav-icon { background: rgba(0,212,184,0.12); border-color: rgba(0,212,184,0.3); color: var(--teal); }
+    .nav-item.active::before {
+      content: '';
+      position: absolute; left: -0.85rem; top: 20%; bottom: 20%;
+      width: 3px; background: linear-gradient(180deg, var(--teal), var(--indigo));
+      border-radius: 0 3px 3px 0;
+      box-shadow: 0 0 12px var(--teal);
+    }
+
+    .sidebar-footer {
+      margin-top: auto; padding: 0.85rem 0.75rem;
+      border-top: 1px solid var(--border-dim);
+    }
+    .sidebar-footer-text {
+      font-family: var(--mono); font-size: 0.65rem;
+      color: var(--text-sub); letter-spacing: 0.06em; text-align: center;
+    }
+    .sidebar-version {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      background: rgba(0,212,184,0.06); border: 1px solid rgba(0,212,184,0.1);
+      border-radius: 4px; padding: 0.22rem 0.65rem; margin-top: 0.45rem;
+      font-family: var(--mono); font-size: 0.62rem; color: var(--teal); letter-spacing: 0.08em;
+    }
+
+    /* ── MOBILE TAB BAR ── */
+    #mobile-tabs {
+      display: none;
+      background: rgba(5,10,22,0.92);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      position: relative; z-index: 9;
+    }
+    .mob-tabs-inner { display: flex; align-items: stretch; }
+    .mob-tab {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 0.2rem;
+      padding: 0.6rem 0.5rem;
+      font-family: var(--ui); font-size: 0.75rem; font-weight: 600;
+      color: var(--text-sub); cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s; letter-spacing: 0.01em;
+    }
+    .mob-tab i { font-size: 1.1rem; }
+    .mob-tab:hover { color: var(--text); background: var(--teal-dim); }
+    .mob-tab.active { color: var(--teal); border-bottom-color: var(--teal); background: var(--teal-dim); }
+
+    /* ── CONTENT ── */
+    #content { overflow-y: auto; padding: 1.5rem; background: transparent; }
+    #content::-webkit-scrollbar { width: 4px; }
+    #content::-webkit-scrollbar-thumb { background: rgba(0,212,184,0.15); border-radius: 4px; }
+    #content::-webkit-scrollbar-track { background: transparent; }
+
+    .tab-pane { display: none; animation: fade-up 0.25s ease; }
+    .tab-pane.active { display: block; }
+    @keyframes fade-up { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
+
+    /* ── GLASS PANELS ── */
+    .panel {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
+      transition: box-shadow 0.2s;
+    }
+    .panel:hover { box-shadow: 0 4px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,212,184,0.06), inset 0 1px 0 rgba(255,255,255,0.05); }
+
+    .panel-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.75rem 1.1rem; background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border-dim); gap: 0.5rem; flex-wrap: wrap;
+    }
+    .panel-title {
+      display: flex; align-items: center; gap: 0.55rem;
+      font-family: var(--ui); font-size: 0.82rem; font-weight: 700;
+      letter-spacing: 0.03em; text-transform: uppercase; color: var(--text);
+    }
+    .panel-title i { color: var(--teal); font-size: 0.9rem; }
+    .panel-title-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--teal); box-shadow: 0 0 8px var(--teal); flex-shrink: 0;
+    }
+    .panel-body { padding: 1.1rem; }
+
+    /* ── METRICS ── */
+    .metric-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 0.55rem; }
+    .metric {
+      background: rgba(255,255,255,0.025);
+      border: 1px solid var(--border-dim);
+      border-radius: 9px; padding: 0.7rem 0.85rem;
+      transition: all 0.15s; position: relative; overflow: hidden;
+    }
+    .metric::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,212,184,0.2), transparent);
+    }
+    .metric:hover { background: rgba(0,212,184,0.04); border-color: rgba(0,212,184,0.18); }
+    .metric.span2 { grid-column: 1 / -1; }
+
+    .metric-lbl {
+      font-family: var(--ui); font-size: 0.72rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-sub); margin-bottom: 0.35rem;
+    }
+    .metric-val {
+      font-family: var(--mono); font-size: 1.2rem; font-weight: 600;
+      color: var(--text); line-height: 1.2;
+    }
+    .metric-val.sm { font-size: 0.97rem; font-weight: 600; }
+
+    .section-label {
+      font-family: var(--ui); font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text-sub); margin-bottom: 0.6rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border-dim); }
+
+    /* ── BEARING VISUAL ── */
+    .bearing-wrap {
+      background: rgba(255,255,255,0.025); border: 1px solid var(--border-dim);
+      border-radius: 9px; padding: 0.85rem;
+    }
+    .bearing-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; }
+    .bearing-lbl { font-size: 0.85rem; font-weight: 600; color: var(--text-sub); }
+    #bearingRel { font-family: var(--mono); font-size: 1.05rem; color: var(--amber); font-weight: 600; }
+    .bearing-track {
+      position: relative; height: 6px;
+      background: rgba(255,255,255,0.04); border-radius: 10px;
+      border: 1px solid var(--border-dim); overflow: visible;
+    }
+    .bearing-track-fill {
+      position: absolute; inset: 0; border-radius: 10px;
+      background: linear-gradient(90deg,
+        rgba(244,63,94,0.3) 0%,
+        rgba(255,255,255,0.05) 35%,
+        rgba(0,212,184,0.15) 50%,
+        rgba(255,255,255,0.05) 65%,
+        rgba(244,63,94,0.3) 100%
+      );
+    }
+    .bearing-cursor {
+      position: absolute; top: -8px;
+      width: 0; height: 0;
+      border-left: 5px solid transparent; border-right: 5px solid transparent;
+      border-bottom: 11px solid var(--amber); transform: translateX(-50%);
+      filter: drop-shadow(0 0 6px rgba(245,158,11,.8)); transition: left 0.35s cubic-bezier(.4,0,.2,1);
+    }
+    .bearing-labels {
+      display: flex; justify-content: space-between;
+      font-family: var(--mono); font-size: 0.68rem; font-weight: 500; color: var(--text-sub); margin-top: 0.5rem;
+    }
+    #bearingText { color: var(--teal); font-weight: 600; }
+
+    .prog-track { height: 3px; background: rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; margin-top: 0.35rem; }
+    #intensityFill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, var(--teal), var(--amber)); transition: width 0.4s cubic-bezier(.4,0,.2,1); }
+
+    /* ── MAP ── */
+    #map {
+      height: 360px; width: 100%;
+      filter: invert(0.92) hue-rotate(180deg) brightness(0.78) contrast(1.15) saturate(0.9);
+    }
+    .map-hint {
+      padding: 0.5rem 1.1rem; font-family: var(--ui); font-size: 0.75rem; font-weight: 500;
+      color: var(--text-sub); background: rgba(255,255,255,0.015); border-top: 1px solid var(--border-dim);
+      display: flex; align-items: center; gap: 0.35rem;
+    }
+    .map-hint i { color: var(--teal); }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+      font-family: var(--ui); font-size: 0.82rem; font-weight: 700;
+      padding: 0.58rem 1.15rem; border-radius: 8px;
+      border: 1px solid var(--border-dim); background: rgba(255,255,255,0.04); color: var(--text-sub);
+      cursor: pointer; transition: all 0.18s; text-transform: uppercase;
+      letter-spacing: 0.05em; white-space: nowrap; position: relative; overflow: hidden;
+    }
+    .btn::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 60%);
+      opacity: 0; transition: opacity 0.18s;
+    }
+    .btn:hover::before { opacity: 1; }
+    .btn:hover { background: rgba(255,255,255,0.07); color: var(--text); border-color: var(--border); transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-teal {
+      background: linear-gradient(135deg, rgba(0,212,184,0.18), rgba(0,212,184,0.08));
+      border-color: rgba(0,212,184,0.4); color: var(--teal);
+      box-shadow: 0 2px 16px rgba(0,212,184,0.1), inset 0 1px 0 rgba(0,212,184,0.1);
+    }
+    .btn-teal:hover { background: linear-gradient(135deg, rgba(0,212,184,0.28), rgba(0,212,184,0.15)); border-color: rgba(0,212,184,0.6); box-shadow: 0 4px 20px rgba(0,212,184,0.2); }
+
+    .btn-rose {
+      background: linear-gradient(135deg, rgba(244,63,94,0.12), rgba(244,63,94,0.06));
+      border-color: rgba(244,63,94,0.3); color: var(--rose);
+    }
+    .btn-rose:hover { background: linear-gradient(135deg, rgba(244,63,94,0.22), rgba(244,63,94,0.12)); border-color: rgba(244,63,94,0.5); }
+
+    .btn-amber {
+      background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.06));
+      border-color: rgba(245,158,11,0.3); color: var(--amber);
+    }
+    .btn-amber:hover { background: linear-gradient(135deg, rgba(245,158,11,0.22), rgba(245,158,11,0.12)); border-color: rgba(245,158,11,0.5); }
+
+    .btn-emerald {
+      background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.06));
+      border-color: rgba(16,185,129,0.3); color: var(--emerald);
+    }
+    .btn-emerald:hover { background: linear-gradient(135deg, rgba(16,185,129,0.22), rgba(16,185,129,0.12)); border-color: rgba(16,185,129,0.5); }
+
+    .btn-sm { padding: 0.32rem 0.7rem; font-size: 0.62rem; border-radius: 6px; }
+    .btn:disabled { opacity: 0.3; pointer-events: none; }
+
+    /* ── TOGGLE ── */
+    .toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .tgl-track {
+      position: absolute; inset: 0;
+      background: rgba(255,255,255,0.07);
+      border-radius: 22px; cursor: pointer; transition: all 0.22s;
+      border: 1px solid var(--border-dim);
+    }
+    .tgl-track::before {
+      content: ''; position: absolute; width: 16px; height: 16px;
+      left: 2px; top: 2px; background: var(--text-sub); border-radius: 50%;
+      transition: 0.22s cubic-bezier(.4,0,.2,1);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    input:checked + .tgl-track { background: rgba(0,212,184,0.2); border-color: rgba(0,212,184,0.5); }
+    input:checked + .tgl-track::before { transform: translateX(18px); background: var(--teal); box-shadow: 0 0 8px rgba(0,212,184,0.5); }
+
+    /* ── RANGE ── */
+    input[type=range] {
+      -webkit-appearance: none; width: 100%; height: 4px;
+      background: rgba(255,255,255,0.07); border-radius: 10px; outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 18px; height: 18px;
+      background: var(--teal); border-radius: 50%;
+      box-shadow: 0 0 12px rgba(0,212,184,0.5); cursor: pointer;
+      border: 2px solid rgba(0,212,184,0.4);
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 18px; height: 18px; background: var(--teal); border-radius: 50%;
+      box-shadow: 0 0 12px rgba(0,212,184,0.5); cursor: pointer; border: none;
+    }
+
+    /* ── BADGE ── */
+    .badge {
+      font-family: var(--mono); font-size: 0.68rem; font-weight: 600;
+      padding: 0.18rem 0.55rem; border-radius: 5px; border: 1px solid;
+      display: inline-block; letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .badge-high   { color: var(--rose);    border-color: rgba(244,63,94,0.3);   background: rgba(244,63,94,0.08); }
+    .badge-medium { color: var(--amber);   border-color: rgba(245,158,11,0.3);  background: rgba(245,158,11,0.08); }
+    .badge-low    { color: var(--emerald); border-color: rgba(16,185,129,0.3);  background: rgba(16,185,129,0.08); }
+
+    /* ── TABLE ── */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table thead tr { background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border-dim); }
+    .data-table th {
+      font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-sub); padding: 0.65rem 1rem;
+      text-align: left; white-space: nowrap;
+    }
+    .data-table td {
+      font-family: var(--mono); font-size: 0.76rem; color: var(--text);
+      padding: 0.55rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.025);
+    }
+    .data-table tbody tr { transition: background 0.12s; }
+    .data-table tbody tr:hover td { background: rgba(0,212,184,0.03); color: var(--text); }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    /* ── STAT CARDS ── */
+    .stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 0.75rem; margin-bottom: 1.25rem; }
+    .stat-card {
+      background: var(--glass); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.1rem 1rem; text-align: center;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      transition: all 0.2s; position: relative; overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,212,184,0.3), transparent);
+    }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(0,212,184,0.2); box-shadow: 0 8px 28px rgba(0,0,0,0.35); }
+    .stat-num { font-family: var(--brand); font-size: 2rem; font-weight: 700; color: #fff; line-height: 1.2; }
+    .stat-sub { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-sub); margin-bottom: 0.35rem; }
+
+    /* ── MISC COMPONENTS ── */
+    .divider { border: none; border-top: 1px solid var(--border-dim); margin: 0.8rem 0; }
+
+    .row-label {
+      font-size: 0.8rem; font-weight: 600; color: var(--text-sub);
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .row-label i { color: var(--text-dim); font-size: 0.8rem; }
+    .row-val { font-family: var(--mono); font-size: 0.8rem; color: var(--teal); font-weight: 600; }
+
+    .override-chip {
+      font-family: var(--mono); font-size: 0.6rem;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border-dim);
+      border-radius: 5px; padding: 0.22rem 0.65rem; color: var(--text-sub);
+    }
+
+    .sub-panel {
+      background: rgba(255,255,255,0.025); border: 1px solid var(--border-dim);
+      border-radius: 9px; padding: 0.9rem;
+    }
+
+    .cap-status {
+      font-family: var(--mono); font-size: 0.62rem;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border-dim);
+      border-radius: 6px; padding: 0.32rem 0.8rem; color: var(--text-sub);
+    }
+
+    #noImageMessage {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.6rem; height: 180px; border: 1px dashed rgba(255,255,255,0.07);
+      border-radius: 10px; font-family: var(--mono); font-size: 0.68rem; color: var(--text-dim);
+    }
+    #noImageMessage i { font-size: 2rem; color: var(--text-dim); }
+
+    input[type=number] {
+      width: 100%; padding: 0.45rem 0.7rem;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border-dim);
+      border-radius: 7px; font-family: var(--mono); font-size: 0.8rem;
+      color: var(--text); outline: none; margin-top: 0.5rem; transition: border-color 0.15s;
+    }
+    input[type=number]:focus { border-color: rgba(0,212,184,0.4); background: rgba(0,212,184,0.03); }
+
+    .scroll-y { overflow-y: auto; }
+    .scroll-y::-webkit-scrollbar { width: 3px; }
+    .scroll-y::-webkit-scrollbar-thumb { background: rgba(0,212,184,0.15); border-radius: 4px; }
+
+    /* ── LAYOUT HELPERS ── */
+    .usv-grid { display: grid; grid-template-columns: 320px 1fr; gap: 1.25rem; align-items: start; }
+    .usv-right { display: flex; flex-direction: column; gap: 1.25rem; }
+    .ctrl-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.1rem; }
+    .sensors-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    .nano-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: center; }
+
+    /* ── RISK INDICATOR ── */
+    .risk-panel {
+      border-radius: 9px; padding: 0.9rem;
+      background: rgba(99,102,241,0.05);
+      border-left: 2px solid rgba(99,102,241,0.5);
+      border-top: 1px solid rgba(99,102,241,0.1);
+      border-right: 1px solid rgba(99,102,241,0.05);
+      border-bottom: 1px solid rgba(99,102,241,0.05);
+    }
+
+    /* ══════════════════════════
+       TABLET ≤ 1024px
+    ══════════════════════════ */
+    @media (max-width: 1024px) {
+      :root { --sidebar-w: 190px; }
+      .ctrl-grid { grid-template-columns: 1fr 1fr; }
+      .ctrl-grid > *:last-child { grid-column: 1 / -1; }
+    }
+
+    /* ══════════════════════════
+       MOBILE ≤ 767px
+    ══════════════════════════ */
+    @media (max-width: 767px) {
+      body { overflow: auto; }
+      #shell {
+        grid-template-columns: 1fr;
+        grid-template-rows: var(--topbar-h) var(--mobtab-h) 1fr;
+        height: auto; min-height: 100svh;
+      }
+      #sidebar { display: none; }
+      #mobile-tabs { display: block; }
+      #content { overflow: visible; height: auto; padding: 0.9rem; }
+      #topbar { padding: 0 1rem; }
+      .brand-sub { display: none; }
+      .chip.hide-mob { display: none; }
+      .usv-grid { grid-template-columns: 1fr; }
+      .usv-grid > .panel { max-height: none !important; }
+      #map { height: 240px; }
+      .ctrl-grid { grid-template-columns: 1fr; }
+      .ctrl-grid > *:last-child { grid-column: auto; }
+      .sensors-grid { grid-template-columns: 1fr; }
+      .stat-row { grid-template-columns: repeat(2,1fr); gap: 0.55rem; }
+      .stat-num { font-size: 1.6rem; }
+      .nano-grid { grid-template-columns: 1fr; }
+      .btn { padding: 0.6rem 1rem; }
+      input[type=range]::-webkit-slider-thumb { width: 22px; height: 22px; }
+    }
+
+    @media (max-width: 390px) {
+      .mob-tab { font-size: 0.6rem; padding: 0.5rem 0.4rem; }
+      .metric-val { font-size: 0.9rem; }
+      .brand-name { font-size: 1rem; }
+    }
+  </style>
 </head>
 <body>
-<div class="container-fluid px-4 py-3">
-    <!-- Bootstrap Tabs centered -->
-    <ul class="nav nav-tabs justify-content-center mb-4" id="mainTab" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="usv-tab-btn" data-bs-toggle="tab" data-bs-target="#usv" type="button" role="tab">🚤 USV Telemetry & Control</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="nanoplastic-tab-btn" data-bs-toggle="tab" data-bs-target="#nanoplastic" type="button" role="tab">🔬 Nanoplastic Detection</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="hmlog-tab-btn" data-bs-toggle="tab" data-bs-target="#hmlog" type="button" role="tab">🪨 Heavy Metal Log</button>
-        </li>
-    </ul>
-    <div class="tab-content" id="mainTabContent">
-        <!-- ==================== USV TAB (unchanged) ==================== -->
-        <div class="tab-pane fade show active" id="usv" role="tabpanel">
-            <!-- ... (identical to previous USV tab HTML) ... -->
-            <!-- Top status bar -->
-            <div class="row mb-4">
-                <div class="col-12 d-flex flex-wrap gap-3 align-items-center justify-content-between">
-                    <div class="d-flex gap-3">
-                        <div class="status-pill"><i class="bi bi-wifi"></i> <span id="loraStat">---</span></div>
-                        <div class="status-pill"><i class="bi bi-satellite"></i> <span id="gpsStatus">GPS: ---</span></div>
-                        <div class="status-pill"><i class="bi bi-clock"></i> <span id="time">--:--:--</span></div>
-                    </div>
-                    <div class="live-badge"><i class="bi bi-dot"></i> LIVE</div>
-                </div>
-            </div>
+<div id="shell">
 
-            <div class="row g-4">
-                <!-- Left: Telemetry Metrics (modern grid) -->
-                <div class="col-lg-7">
-                    <div class="glass-card h-100">
-                        <div class="card-header">
-                            <i class="bi bi-speedometer2 me-2"></i> Live Telemetry
-                        </div>
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <!-- Navigation metrics -->
-                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Compass Heading</div><div id="head" class="metric-value">---</div></div></div>
-                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Target Bearing</div><div id="tbrng" class="metric-value">---</div></div></div>
-                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Relative Bearing</div><div id="relBearing" class="metric-value">---</div></div></div>
-                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Steering Error</div><div id="err" class="metric-value">---</div></div></div>
-                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Direction</div><div id="direction" class="metric-value">---</div></div></div>
-                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Turn Intensity</div><div id="intensity" class="metric-value">---</div><div class="progress-modern mt-2"><div id="intensityFill" class="progress-bar" style="width:0%"></div></div></div></div>
-                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Cross-track Error</div><div id="xte" class="metric-value">---</div></div></div>
-                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Dist to Node</div><div id="dist" class="metric-value">---</div></div></div>
-                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Latitude</div><div id="lat" class="metric-value">---</div></div></div>
-                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Longitude</div><div id="lon" class="metric-value">---</div></div></div>
-                                <div class="col-md-6"><div class="metric-modern"><div class="metric-label">Active Node</div><div id="wp" class="metric-value">---</div></div></div>
-                                <!-- Water quality -->
-                                <div class="col-md-4"><div class="metric-modern"><div class="metric-label">Water Temp</div><div id="waterTemp" class="metric-value">---</div></div></div>
-                                <div class="col-md-4"><div class="metric-modern"><div class="metric-label">Water pH</div><div id="waterPH" class="metric-value">---</div></div></div>
-                                <div class="col-md-4"><div class="metric-modern"><div class="metric-label">Water TDS</div><div id="waterTDS" class="metric-value">---</div></div></div>
-                                <!-- Heavy metal risk -->
-                                <div class="col-12"><div class="metric-modern" style="background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(56,189,248,0.05));"><div class="metric-label">Heavy Metal Risk</div><div id="hmRiskLevel" class="metric-value">---</div><div id="hmRiskScore" class="small text-secondary mt-1">Score: ---</div><div id="hmRiskReasons" class="small text-secondary">---</div></div></div>
-                            </div>
-                            <!-- Bearing visual -->
-                            <div class="bearing-visual-modern mt-4">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="text-secondary"><i class="bi bi-compass"></i> Bearing Indicator</span>
-                                    <span id="bearingRel" class="badge bg-dark">---</span>
-                                </div>
-                                <div id="bearingVisual" class="bearing-track-modern" style="position: relative; height: 8px;"><!-- dynamic cursor --></div>
-                                <div class="d-flex justify-content-between mt-1"><span>← LEFT</span><span id="bearingText" class="fw-bold text-info">STRAIGHT</span><span>RIGHT →</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right: Map Column -->
-                <div class="col-lg-5">
-                    <div class="glass-card h-100">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span><i class="bi bi-map me-2"></i> Track View</span>
-                            <div>
-                                <button class="btn btn-sm btn-outline-info btn-glow" onclick="centerAndZoom()">Center</button>
-                                <button class="btn btn-sm btn-outline-info btn-glow" onclick="zoomToFit()">Fit</button>
-                                <button class="btn btn-sm btn-outline-info btn-glow" onclick="toggleAutoZoom()" id="autoZoomBtn">Auto-Zoom OFF</button>
-                            </div>
-                        </div>
-                        <div class="card-body p-0 map-container"><div id="map" class="map"></div></div>
-                        <div class="p-3 border-top border-secondary"><small class="text-secondary">📍 Click on map to add waypoints | Right‑click on a waypoint to delete/adjust</small></div>
-                    </div>
-                </div>
-
-                <!-- Control Center -->
-                <div class="col-12">
-                    <div class="glass-card">
-                        <div class="card-header"><i class="bi bi-joystick me-2"></i> Control Center</div>
-                        <div class="card-body">
-                            <div class="row g-4">
-                                <div class="col-md-4">
-                                    <div class="d-grid gap-3">
-                                        <button class="btn btn-primary btn-glow" onclick="fetch('/start')"><i class="bi bi-play-fill"></i> Start Mission</button>
-                                        <button class="btn btn-danger btn-glow" onclick="stopReset()"><i class="bi bi-stop-circle"></i> Stop / Reset</button>
-                                        <button class="btn btn-warning btn-glow" onclick="startCalibration()"><i class="bi bi-gear"></i> Calibrate Compass</button>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="bg-dark bg-opacity-25 p-3 rounded-4">
-                                        <div class="form-check form-switch mb-2">
-                                            <input class="form-check-input" type="checkbox" id="servoToggle" onchange="onServoToggle(this.checked)">
-                                            <label class="form-check-label fw-semibold"><i class="bi bi-motherboard"></i> Servo Control</label>
-                                        </div>
-                                        <div id="servoState" class="badge bg-secondary">OFF</div>
-                                    </div>
-                                    <div class="bg-dark bg-opacity-25 p-3 rounded-4 mt-3">
-                                        <label class="fw-semibold"><i class="bi bi-droplet"></i> Pump Rotations</label>
-                                        <input type="number" id="pumpRot" class="form-control form-control-sm bg-dark text-white border-secondary" min="1" max="20" value="1">
-                                        <div class="d-flex gap-2 mt-2">
-                                            <button class="btn btn-sm btn-success btn-glow" onclick="pumpForward()">FWD</button>
-                                            <button class="btn btn-sm btn-warning btn-glow" onclick="pumpReverse()">REV</button>
-                                            <button class="btn btn-sm btn-danger btn-glow" onclick="pumpStop()">STOP</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="bg-dark bg-opacity-25 p-3 rounded-4">
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input" type="checkbox" id="syncEnabled" onchange="onSyncToggle(this.checked)">
-                                            <label class="form-check-label fw-semibold"><i class="bi bi-link"></i> Sync Throttle</label>
-                                        </div>
-                                        <label class="mt-2 small text-secondary">Left Throttle (µs)</label>
-                                        <input type="range" class="form-range" min="1000" max="2000" value="1000" id="leftThrottle" oninput="updateLeftThrottle(this.value)">
-                                        <div id="thrLeftVal" class="small text-end text-info">1000 µs</div>
-                                        <label class="mt-2 small text-secondary">Right Throttle (µs)</label>
-                                        <input type="range" class="form-range" min="1000" max="2000" value="1000" id="rightThrottle" oninput="updateRightThrottle(this.value)">
-                                        <div id="thrRightVal" class="small text-end text-info">1000 µs</div>
-                                        <div class="mt-2">Manual Override: <span id="manualOverrideVal" class="badge bg-dark">OFF</span></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ==================== NANOPLASTIC TAB ==================== -->
-        <div class="tab-pane fade" id="nanoplastic" role="tabpanel">
-            <div class="row mb-4">
-                <div class="col-12 d-flex justify-content-between align-items-center">
-                    <div>
-                        <button id="captureBtn" class="btn btn-primary btn-lg btn-glow"><i class="bi bi-camera me-2"></i> Capture & Analyze</button>
-                        <span id="captureStatus" class="badge bg-secondary ms-3">Ready</span>
-                    </div>
-                </div>
-            </div>
-            <div class="row g-3 mb-4">
-                <div class="col-md-3"><div class="metric-modern"><div class="metric-label">Total Samples</div><div id="totalSamples" class="metric-value">0</div></div></div>
-                <div class="col-md-3"><div class="metric-modern"><div class="metric-label">Avg Particles</div><div id="avgParticles" class="metric-value">0</div></div></div>
-                <div class="col-md-3"><div class="metric-modern"><div class="metric-label">High Risk</div><div id="highRiskCount" class="metric-value">0</div></div></div>
-                <div class="col-md-3"><div class="metric-modern"><div class="metric-label">Max Particles</div><div id="maxParticles" class="metric-value">0</div></div></div>
-            </div>
-            <div class="glass-card mb-4">
-                <div class="card-header"><i class="bi bi-image me-2"></i> Latest Analysis</div>
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col-md-6 text-center">
-                            <img id="latestImage" src="" class="img-fluid rounded" style="max-height: 320px;">
-                            <div id="noImageMessage" class="text-muted mt-2">Waiting for capture...</div>
-                        </div>
-                        <div class="col-md-6">
-                            <ul class="list-group list-group-flush bg-transparent">
-                                <li class="list-group-item bg-transparent text-white d-flex justify-content-between"><span>Particles Detected</span><span id="particleCount" class="fw-bold">---</span></li>
-                                <li class="list-group-item bg-transparent text-white d-flex justify-content-between"><span>Concentration (µg/L)</span><span id="concentration" class="fw-bold">---</span></li>
-                                <li class="list-group-item bg-transparent text-white d-flex justify-content-between"><span>Mean Intensity</span><span id="intensity" class="fw-bold">---</span></li>
-                                <li class="list-group-item bg-transparent text-white d-flex justify-content-between"><span>Confidence</span><span id="confidence" class="fw-bold">---</span></li>
-                                <li class="list-group-item bg-transparent text-white d-flex justify-content-between"><span>Risk Level</span><span id="riskLevel" class="fw-bold">---</span></li>
-                            </ul>
-                            <!-- hidden span to prevent null error in fetchDetections -->
-                            <span id="timestampDisplay" hidden></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="glass-card">
-                <div class="card-header"><i class="bi bi-clock-history me-2"></i> Detection History</div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-dark table-hover mb-0">
-                            <thead><tr><th>Time</th><th>Particles</th><th>Conc.</th><th>Intensity</th><th>Confidence</th><th>Risk</th></tr></thead>
-                            <tbody id="historyBody"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ==================== NEW HEAVY METAL LOG TAB ==================== -->
-        <div class="tab-pane fade" id="hmlog" role="tabpanel">
-            <div class="glass-card">
-                <div class="card-header"><i class="bi bi-file-earmark-bar-graph me-2"></i> Heavy Metal Sensor Log (auto-saved every 5 min)</div>
-                <div class="card-body p-0">
-                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                        <table class="table table-dark table-hover mb-0">
-                            <thead><tr><th>Date</th><th>Time</th><th>TDS (ppm)</th><th>pH</th><th>Temp (°C)</th><th>Risk</th></tr></thead>
-                            <tbody id="hmLogBody"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <!-- ── TOPBAR ── -->
+  <header id="topbar">
+    <div class="brand">
+      <div class="brand-icon"><i class="bi bi-water"></i></div>
+      <div>
+        <div class="brand-name">AquaScan</div>
+        <div class="brand-sub">USV Command v2.0</div>
+      </div>
     </div>
+    <div class="topbar-divider"></div>
+    <div class="topbar-chips">
+      <span class="chip hide-mob"><i class="bi bi-reception-4"></i> <span id="loraStat">LoRa: ---</span></span>
+      <span class="chip hide-mob"><i class="bi bi-satellite"></i> <span id="gpsStatus">GPS: ---</span></span>
+      <span class="chip"><i class="bi bi-clock"></i> <span id="time">--:--:--</span></span>
+      <span class="live-pill"><span class="dot-pulse"></span>LIVE</span>
+    </div>
+  </header>
+
+  <!-- ── MOBILE TABS ── -->
+  <div id="mobile-tabs">
+    <div class="mob-tabs-inner">
+      <div class="mob-tab active" data-tab="usv" onclick="showTab('usv')">
+        <i class="bi bi-broadcast"></i><span>USV Control</span>
+      </div>
+      <div class="mob-tab" data-tab="sensors" onclick="showTab('sensors')">
+        <i class="bi bi-activity"></i><span>Sensors</span>
+      </div>
+      <div class="mob-tab" data-tab="nanoplastic" onclick="showTab('nanoplastic')">
+        <i class="bi bi-virus2"></i><span>Nanoplastic</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DESKTOP SIDEBAR ── -->
+  <nav id="sidebar">
+    <div class="nav-section-label">Navigation</div>
+
+    <div class="nav-item active" data-tab="usv" onclick="showTab('usv')">
+      <div class="nav-icon"><i class="bi bi-broadcast"></i></div>
+      <span>USV Control</span>
+    </div>
+    <div class="nav-item" data-tab="sensors" onclick="showTab('sensors')">
+      <div class="nav-icon"><i class="bi bi-activity"></i></div>
+      <span>Sensors &amp; Logs</span>
+    </div>
+    <div class="nav-item" data-tab="nanoplastic" onclick="showTab('nanoplastic')">
+      <div class="nav-icon"><i class="bi bi-virus2"></i></div>
+      <span>Nanoplastic</span>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-footer-text">AquaScan &copy; 2025</div>
+      <div style="display:flex;justify-content:center;">
+        <div class="sidebar-version"><i class="bi bi-hexagon-fill" style="font-size:0.45rem;"></i> v2.0.0 STABLE</div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── MAIN CONTENT ── -->
+  <main id="content">
+
+    <!-- TAB 1 · USV CONTROL -->
+    <div id="usv" class="tab-pane active">
+      <div class="usv-grid">
+
+        <!-- Telemetry Panel -->
+        <div class="panel scroll-y" style="max-height:calc(100vh - 96px);">
+          <div class="panel-head">
+            <div class="panel-title">
+              <div class="panel-title-dot"></div>
+              <i class="bi bi-speedometer2"></i>
+              Live Telemetry
+            </div>
+          </div>
+          <div class="panel-body" style="display:flex;flex-direction:column;gap:1.1rem;">
+
+            <div>
+              <div class="section-label">Navigation</div>
+              <div class="metric-grid">
+                <div class="metric"><div class="metric-lbl">Compass Heading</div><div id="head" class="metric-val">---</div></div>
+                <div class="metric"><div class="metric-lbl">Target Bearing</div><div id="tbrng" class="metric-val">---</div></div>
+                <div class="metric"><div class="metric-lbl">Relative Bearing</div><div id="relBearing" class="metric-val">---</div></div>
+                <div class="metric"><div class="metric-lbl">Steering Error</div><div id="err" class="metric-val">---</div></div>
+                <div class="metric"><div class="metric-lbl">Direction</div><div id="direction" class="metric-val">---</div></div>
+                <div class="metric">
+                  <div class="metric-lbl">Turn Intensity</div>
+                  <div id="intensity" class="metric-val">---</div>
+                  <div class="prog-track"><div id="intensityFill" style="width:0%"></div></div>
+                </div>
+                <div class="metric"><div class="metric-lbl">Cross-track Err</div><div id="xte" class="metric-val">---</div></div>
+                <div class="metric"><div class="metric-lbl">Dist to Node</div><div id="dist" class="metric-val">---</div></div>
+                <div class="metric"><div class="metric-lbl">Latitude</div><div id="lat" class="metric-val sm">---</div></div>
+                <div class="metric"><div class="metric-lbl">Longitude</div><div id="lon" class="metric-val sm">---</div></div>
+                <div class="metric span2"><div class="metric-lbl">Active Node</div><div id="wp" class="metric-val">---</div></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="section-label">Bearing Indicator</div>
+              <div class="bearing-wrap">
+                <div class="bearing-row">
+                  <span class="bearing-lbl">Rel. Bearing</span>
+                  <span id="bearingRel">---</span>
+                </div>
+                <div id="bearingVisual" class="bearing-track">
+                  <div class="bearing-track-fill"></div>
+                </div>
+                <div class="bearing-labels">
+                  <span>← LEFT</span><span id="bearingText">STRAIGHT</span><span>RIGHT →</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mobile status -->
+            <div class="metric-grid" id="mob-status">
+              <div class="metric"><div class="metric-lbl">LoRa</div><div id="loraStatMob" class="metric-val sm">---</div></div>
+              <div class="metric"><div class="metric-lbl">GPS</div><div id="gpsStatMob" class="metric-val sm">---</div></div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Right column: Map + Controls -->
+        <div class="usv-right">
+
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">
+                <div class="panel-title-dot"></div>
+                <i class="bi bi-map"></i>Track View
+              </div>
+              <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+                <button class="btn btn-teal btn-sm" onclick="centerAndZoom()">
+                  <i class="bi bi-crosshair"></i> Center
+                </button>
+                <button class="btn btn-sm" onclick="zoomToFit()">Fit</button>
+                <button class="btn btn-sm" id="autoZoomBtn" onclick="toggleAutoZoom()">Auto</button>
+              </div>
+            </div>
+            <div id="map"></div>
+            <div class="map-hint"><i class="bi bi-plus-circle"></i> Click map to add waypoint</div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">
+                <div class="panel-title-dot"></div>
+                <i class="bi bi-joystick"></i>Control Center
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="ctrl-grid">
+
+                <!-- Mission -->
+                <div>
+                  <div class="section-label">Mission</div>
+                  <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                    <button class="btn btn-teal" onclick="fetch('/start')">
+                      <i class="bi bi-play-fill"></i> Start Mission
+                    </button>
+                    <button class="btn btn-rose" onclick="stopReset()">
+                      <i class="bi bi-stop-circle"></i> Stop / Reset
+                    </button>
+                    <button class="btn btn-amber" onclick="startCalibration()">
+                      <i class="bi bi-gear-wide-connected"></i> Calibrate
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Actuators -->
+                <div>
+                  <div class="section-label">Actuators</div>
+                  <div style="display:flex;flex-direction:column;gap:0.55rem;">
+                    <div class="sub-panel">
+                      <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div class="row-label"><i class="bi bi-motherboard"></i> Servo</div>
+                        <label class="toggle"><input type="checkbox" id="servoToggle" onchange="onServoToggle(this.checked)"><span class="tgl-track"></span></label>
+                      </div>
+                      <div id="servoState" style="font-family:var(--mono);font-size:0.58rem;color:var(--text-dim);margin-top:0.35rem;letter-spacing:0.06em;">OFF</div>
+                    </div>
+                    <div class="sub-panel">
+                      <div class="row-label" style="margin-bottom:0.4rem;"><i class="bi bi-droplet-fill"></i> Pump</div>
+                      <input type="number" id="pumpRot" min="1" max="20" value="1">
+                      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.35rem;margin-top:0.5rem;">
+                        <button class="btn btn-emerald btn-sm" onclick="pumpForward()">FWD</button>
+                        <button class="btn btn-amber btn-sm" onclick="pumpReverse()">REV</button>
+                        <button class="btn btn-rose btn-sm" onclick="pumpStop()">STOP</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Throttle -->
+                <div>
+                  <div class="section-label">Throttle</div>
+                  <div class="sub-panel">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.85rem;">
+                      <div class="row-label"><i class="bi bi-link-45deg"></i> Sync</div>
+                      <label class="toggle"><input type="checkbox" id="syncEnabled" onchange="onSyncToggle(this.checked)"><span class="tgl-track"></span></label>
+                    </div>
+                    <div style="margin-bottom:0.75rem;">
+                      <div style="display:flex;justify-content:space-between;margin-bottom:0.35rem;">
+                        <span class="row-label">Left</span><span id="thrLeftVal" class="row-val">1000 µs</span>
+                      </div>
+                      <input type="range" min="1000" max="2000" value="1000" id="leftThrottle" oninput="updateLeftThrottle(this.value)">
+                    </div>
+                    <div>
+                      <div style="display:flex;justify-content:space-between;margin-bottom:0.35rem;">
+                        <span class="row-label">Right</span><span id="thrRightVal" class="row-val">1000 µs</span>
+                      </div>
+                      <input type="range" min="1000" max="2000" value="1000" id="rightThrottle" oninput="updateRightThrottle(this.value)">
+                    </div>
+                    <hr class="divider">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                      <span class="row-label" style="font-size:0.68rem;">Override</span>
+                      <span id="manualOverrideVal" class="override-chip">OFF</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2 · SENSORS & LOGS -->
+    <div id="sensors" class="tab-pane">
+      <div class="sensors-grid">
+
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">
+              <div class="panel-title-dot"></div>
+              <i class="bi bi-droplet-half"></i>Water Quality &amp; Heavy Metals
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="metric-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:0.85rem;">
+              <div class="metric"><div class="metric-lbl">Temperature</div><div id="waterTemp" class="metric-val sm">---</div></div>
+              <div class="metric"><div class="metric-lbl">pH Level</div><div id="waterPH" class="metric-val sm">---</div></div>
+              <div class="metric"><div class="metric-lbl">TDS (ppm)</div><div id="waterTDS" class="metric-val sm">---</div></div>
+            </div>
+            <div class="risk-panel">
+              <div class="metric-lbl" style="margin-bottom:0.4rem;">Heavy Metal Risk Assessment</div>
+              <div id="hmRiskLevel" class="metric-val" style="font-size:1.1rem;margin-bottom:0.25rem;">---</div>
+              <div id="hmRiskScore" style="font-family:var(--mono);font-size:0.6rem;color:var(--text-sub);margin-bottom:0.4rem;">Score: ---</div>
+              <div id="hmRiskReasons" style="font-size:0.67rem;color:var(--text-dim);line-height:1.6;">---</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title">
+              <div class="panel-title-dot"></div>
+              <i class="bi bi-table"></i>Heavy Metal Log
+            </div>
+          </div>
+          <div class="table-wrap scroll-y" style="max-height:360px;">
+            <table class="data-table">
+              <thead><tr><th>Date</th><th>Time</th><th>TDS</th><th>pH</th><th>Temp</th><th>Risk</th></tr></thead>
+              <tbody id="hmLogBody"><tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-dim);">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 3 · NANOPLASTIC -->
+    <div id="nanoplastic" class="tab-pane">
+
+      <div style="display:flex;align-items:center;gap:0.85rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+        <button id="captureBtn" class="btn btn-teal" style="font-size:0.76rem;padding:0.6rem 1.5rem;">
+          <i class="bi bi-camera-fill"></i> Capture &amp; Analyze
+        </button>
+        <span id="captureStatus" class="cap-status">Ready</span>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-sub">Total Samples</div>
+          <div id="totalSamples" class="stat-num">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-sub">Avg Particles</div>
+          <div id="avgParticles" class="stat-num">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-sub">High Risk</div>
+          <div id="highRiskCount" class="stat-num" style="color:var(--rose);">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-sub">Max Particles</div>
+          <div id="maxParticles" class="stat-num">0</div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:1.25rem;">
+        <div class="panel-head">
+          <div class="panel-title">
+            <div class="panel-title-dot"></div>
+            <i class="bi bi-image"></i>Latest Analysis
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="nano-grid">
+            <div>
+              <img id="latestImage" src="" style="display:none;width:100%;max-height:220px;object-fit:contain;border-radius:9px;border:1px solid var(--border-dim);">
+              <div id="noImageMessage"><i class="bi bi-camera"></i>Awaiting capture…</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:0;">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--border-dim);">
+                <span style="font-size:0.71rem;font-weight:500;color:var(--text-sub);">Particles</span>
+                <span id="particleCount" style="font-family:var(--mono);font-size:0.78rem;color:var(--text);">---</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--border-dim);">
+                <span style="font-size:0.71rem;font-weight:500;color:var(--text-sub);">Concentration</span>
+                <span id="concentration" style="font-family:var(--mono);font-size:0.78rem;color:var(--text);">---</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--border-dim);">
+                <span style="font-size:0.71rem;font-weight:500;color:var(--text-sub);">Intensity</span>
+                <span id="nanointensity" style="font-family:var(--mono);font-size:0.78rem;color:var(--text);">---</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--border-dim);">
+                <span style="font-size:0.71rem;font-weight:500;color:var(--text-sub);">Confidence</span>
+                <span id="confidence" style="font-family:var(--mono);font-size:0.78rem;color:var(--text);">---</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;">
+                <span style="font-size:0.71rem;font-weight:500;color:var(--text-sub);">Risk Level</span>
+                <span id="riskLevel" style="font-family:var(--mono);font-size:0.78rem;font-weight:600;">---</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">
+            <div class="panel-title-dot"></div>
+            <i class="bi bi-clock-history"></i>Detection History
+          </div>
+        </div>
+        <div class="table-wrap scroll-y" style="max-height:280px;">
+          <table class="data-table">
+            <thead><tr><th>Time</th><th>Particles</th><th>Conc.</th><th>Intensity</th><th>Confidence</th><th>Risk</th></tr></thead>
+            <tbody id="historyBody"><tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-dim);">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
 </div>
 
-<!-- Bootstrap JS for tabs -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
-    // ==================== GLOBAL VARIABLES & HELPERS (unchanged logic) ====================
-    let usvMap = null;
-    let usvIcon = null, route = null, targetLine = null, waypointMarkers = [];
-    let autoZoomEnabled = false, lastZoomPosition = null, initialZoomDone = false;
-    let throttleDragging = false, throttleHoldTimer = null;
+  /* ── TAB SWITCHING ── */
+  function showTab(id) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll(`[data-tab="${id}"]`).forEach(el => el.classList.add('active'));
+    if (id === 'usv' && typeof usvMap !== 'undefined') setTimeout(() => usvMap.invalidateSize(), 220);
+  }
 
-    function holdThrottleUi() { throttleDragging = true; if(throttleHoldTimer) clearTimeout(throttleHoldTimer); throttleHoldTimer = setTimeout(()=>{ throttleDragging = false; }, 700); }
-    function centerAndZoom(zoomLevel) { let lat = parseFloat(document.getElementById('lat').innerText); let lng = parseFloat(document.getElementById('lon').innerText); if(lat && lng && lat!=0 && lng!=0) { let zoom = zoomLevel||19; usvMap.setView([lat,lng], zoom); return true; } return false; }
-    function zoomToFit() { let bounds = []; let hasPoints = false; let lat = parseFloat(document.getElementById('lat').innerText); let lng = parseFloat(document.getElementById('lon').innerText); if(lat && lng && lat!=0 && lng!=0) { bounds.push([lat,lng]); hasPoints=true; } waypointMarkers.forEach(m=>{ let ll=m.getLatLng(); bounds.push([ll.lat,ll.lng]); hasPoints=true; }); if(hasPoints) usvMap.fitBounds(bounds, {padding:[50,50]}); }
-    function toggleAutoZoom() { autoZoomEnabled = !autoZoomEnabled; let btn = document.getElementById('autoZoomBtn'); btn.innerText = autoZoomEnabled ? "Auto-Zoom ON" : "Auto-Zoom OFF"; if(autoZoomEnabled) centerAndZoom(19); }
-    function startCalibration() { if(confirm('Start compass calibration? Rotate robot for 30 seconds.')) fetch('/calibrate').then(()=>alert('Calibration started. Rotate robot.')); }
-    function stopReset() { fetch('/clear').then(()=>{ route.setLatLngs([]); targetLine.setLatLngs([]); waypointMarkers.forEach(m=>usvMap.removeLayer(m)); waypointMarkers=[]; updatePath(); updateWaypointMarkers(); }); }
-    function updatePath() { fetch('/path').then(r=>r.json()).then(d=>{ route.setLatLngs(d.map(p=>[p.lat,p.lng])); }); }
-    function updateWaypointMarkers() { waypointMarkers.forEach(m=>usvMap.removeLayer(m)); waypointMarkers=[]; fetch('/path').then(r=>r.json()).then(d=>{ d.forEach((wp,idx)=>{ let m = L.circleMarker([wp.lat,wp.lng], {radius:5, color:'#00e676', fillOpacity:0.8}).bindTooltip(`WP ${idx+1}`).addTo(usvMap); waypointMarkers.push(m); }); }); }
-    function createBearingVisual(relBearing) { 
-        let val = (typeof relBearing === 'number' && isFinite(relBearing)) ? relBearing : 0; 
-        let clamped = Math.min(Math.max(val,-180),180); 
-        let posPct = ((clamped+180)/360)*100; 
-        let dir = clamped>4 ? 'RIGHT' : (clamped<-4 ? 'LEFT' : 'STRAIGHT');
-        let cursorHtml = `<div class="bearing-cursor-modern" style="left: ${posPct}%;"></div>`;
-        document.getElementById('bearingVisual').innerHTML = cursorHtml;
-        document.getElementById('bearingRel').innerHTML = clamped.toFixed(0)+'°';
-        document.getElementById('bearingText').innerHTML = dir;
-        return cursorHtml;
-    }
-    function isSyncEnabled() { return document.getElementById('syncEnabled').checked; }
-    function onSyncToggle(checked) { if(checked) updateSyncThrottle(document.getElementById('leftThrottle').value); }
-    function onServoToggle(checked) { fetch("/servo?value="+(checked?1:0)); document.getElementById('servoState').innerText = checked ? "ON" : "OFF"; }
-    function getPumpRot() { let v = parseInt(document.getElementById('pumpRot').value); if(isNaN(v)||v<1) v=1; if(v>20) v=20; document.getElementById('pumpRot').value=v; return v; }
-    function pumpForward() { fetch("/pump?dir=fwd&rot="+getPumpRot()); }
-    function pumpReverse() { fetch("/pump?dir=rev&rot="+getPumpRot()); }
-    function pumpStop() { fetch("/pump?dir=stop"); }
-    function updateSyncThrottle(val) { holdThrottleUi(); let v=parseInt(val); document.getElementById('leftThrottle').value=v; document.getElementById('rightThrottle').value=v; document.getElementById('thrLeftVal').innerText=v+" µs"; document.getElementById('thrRightVal').innerText=v+" µs"; fetch("/set-sync?value="+v); }
-    function updateLeftThrottle(val) { holdThrottleUi(); let v=parseInt(val); document.getElementById('thrLeftVal').innerText=v+" µs"; if(isSyncEnabled()) updateSyncThrottle(v); else fetch("/set-left?value="+v); }
-    function updateRightThrottle(val) { holdThrottleUi(); let v=parseInt(val); document.getElementById('thrRightVal').innerText=v+" µs"; if(isSyncEnabled()) updateSyncThrottle(v); else fetch("/set-right?value="+v); }
+  /* ── MAP ── */
+  let usvMap, usvIcon, route, targetLine, waypointMarkers = [];
+  let autoZoomEnabled = false, initialZoomDone = false, throttleHoldTimer, throttleDragging = false;
 
-    // ==================== USV MAP INIT ====================
-    if(document.getElementById('map')) {
-        usvMap = L.map('map').setView([14.5915,121.0965],18);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:21}).addTo(usvMap);
-        usvIcon = L.circleMarker([0,0], {radius:7, color:'#ff1744', fillOpacity:1, weight:3}).addTo(usvMap);
-        route = L.polyline([], {color:'#00e676', weight:3}).addTo(usvMap);
-        targetLine = L.polyline([], {color:'#d29922', weight:2, dashArray:'5,10'}).addTo(usvMap);
-        usvMap.on('click', e=>{ fetch(`/addWP?lat=${e.latlng.lat}&lng=${e.latlng.lng}`).then(()=>{ updateWaypointMarkers(); updatePath(); }); });
-        updatePath(); updateWaypointMarkers();
-    }
+  function holdThrottleUi() {
+    throttleDragging = true;
+    if (throttleHoldTimer) clearTimeout(throttleHoldTimer);
+    throttleHoldTimer = setTimeout(() => { throttleDragging = false; }, 700);
+  }
+  function centerAndZoom(zoomLevel) {
+    let lat = parseFloat(document.getElementById('lat').innerText);
+    let lng = parseFloat(document.getElementById('lon').innerText);
+    if (lat && lng && lat != 0 && lng != 0) { usvMap.setView([lat, lng], zoomLevel || 19); return true; }
+    return false;
+  }
+  function zoomToFit() {
+    let bounds = [], hasPoints = false;
+    let lat = parseFloat(document.getElementById('lat').innerText);
+    let lng = parseFloat(document.getElementById('lon').innerText);
+    if (lat && lng && lat != 0 && lng != 0) { bounds.push([lat, lng]); hasPoints = true; }
+    waypointMarkers.forEach(m => { let ll = m.getLatLng(); bounds.push([ll.lat, ll.lng]); hasPoints = true; });
+    if (hasPoints) usvMap.fitBounds(bounds, { padding: [30, 30] });
+  }
+  function toggleAutoZoom() {
+    autoZoomEnabled = !autoZoomEnabled;
+    let btn = document.getElementById('autoZoomBtn');
+    btn.style.color = autoZoomEnabled ? 'var(--teal)' : '';
+    btn.style.borderColor = autoZoomEnabled ? 'rgba(0,212,184,0.4)' : '';
+    btn.textContent = autoZoomEnabled ? 'Auto ON' : 'Auto';
+    if (autoZoomEnabled) centerAndZoom(19);
+  }
+  function startCalibration() { if (confirm('Start compass calibration?')) fetch('/calibrate').then(() => alert('Started.')); }
+  function stopReset() {
+    fetch('/clear').then(() => {
+      route.setLatLngs([]); targetLine.setLatLngs([]);
+      waypointMarkers.forEach(m => usvMap.removeLayer(m)); waypointMarkers = [];
+      updatePath(); updateWaypointMarkers();
+    });
+  }
+  function updatePath() { fetch('/path').then(r => r.json()).then(d => { route.setLatLngs(d.map(p => [p.lat, p.lng])); }); }
+  function updateWaypointMarkers() {
+    waypointMarkers.forEach(m => usvMap.removeLayer(m)); waypointMarkers = [];
+    fetch('/path').then(r => r.json()).then(d => {
+      d.forEach((wp, idx) => {
+        let m = L.circleMarker([wp.lat, wp.lng], { radius: 5, color: '#00d4b8', fillOpacity: 0.9, weight: 2 })
+          .bindTooltip(`WP ${idx + 1}`).addTo(usvMap);
+        waypointMarkers.push(m);
+      });
+    });
+  }
+  function createBearingVisual(relBearing) {
+    let val = (typeof relBearing === 'number' && isFinite(relBearing)) ? relBearing : 0;
+    let clamped = Math.min(Math.max(val, -180), 180);
+    let posPct = ((clamped + 180) / 360) * 100;
+    let dir = clamped > 4 ? 'RIGHT' : (clamped < -4 ? 'LEFT' : 'STRAIGHT');
+    let existing = document.getElementById('bearingVisual');
+    let fill = existing.querySelector('.bearing-track-fill');
+    existing.innerHTML = '';
+    if (fill) existing.appendChild(fill);
+    let cursor = document.createElement('div');
+    cursor.className = 'bearing-cursor';
+    cursor.style.left = posPct + '%';
+    existing.appendChild(cursor);
+    document.getElementById('bearingRel').innerText = clamped.toFixed(0) + '°';
+    document.getElementById('bearingText').innerText = dir;
+  }
+  function isSyncEnabled() { return document.getElementById('syncEnabled').checked; }
+  function onSyncToggle(checked) { if (checked) updateSyncThrottle(document.getElementById('leftThrottle').value); }
+  function onServoToggle(checked) { fetch("/servo?value=" + (checked ? 1 : 0)); document.getElementById('servoState').innerText = checked ? "ON" : "OFF"; }
+  function getPumpRot() { let v = parseInt(document.getElementById('pumpRot').value); if (isNaN(v) || v < 1) v = 1; if (v > 20) v = 20; document.getElementById('pumpRot').value = v; return v; }
+  function pumpForward() { fetch("/pump?dir=fwd&rot=" + getPumpRot()); }
+  function pumpReverse() { fetch("/pump?dir=rev&rot=" + getPumpRot()); }
+  function pumpStop() { fetch("/pump?dir=stop"); }
+  function updateSyncThrottle(val) { holdThrottleUi(); let v = parseInt(val); document.getElementById('leftThrottle').value = v; document.getElementById('rightThrottle').value = v; document.getElementById('thrLeftVal').innerText = v + " µs"; document.getElementById('thrRightVal').innerText = v + " µs"; fetch("/set-sync?value=" + v); }
+  function updateLeftThrottle(val) { holdThrottleUi(); let v = parseInt(val); document.getElementById('thrLeftVal').innerText = v + " µs"; if (isSyncEnabled()) updateSyncThrottle(v); else fetch("/set-left?value=" + v); }
+  function updateRightThrottle(val) { holdThrottleUi(); let v = parseInt(val); document.getElementById('thrRightVal').innerText = v + " µs"; if (isSyncEnabled()) updateSyncThrottle(v); else fetch("/set-right?value=" + v); }
 
-    // ==================== USV DATA POLLING ====================
-    setInterval(() => {
-        fetch('/data').then(r=>r.json()).then(d=>{
-            let hasFix = (d.gpsValid==1) || (d.lat!=0 && d.lng!=0);
-            if(hasFix) { document.getElementById('lat').innerText = d.lat.toFixed(6); document.getElementById('lon').innerText = d.lng.toFixed(6); }
-            else { document.getElementById('lat').innerText = '---'; document.getElementById('lon').innerText = '---'; }
-            document.getElementById('head').innerText = d.head.toFixed(1)+"°";
-            document.getElementById('tbrng').innerText = d.tbrng.toFixed(1)+"°";
-            document.getElementById('relBearing').innerText = d.relBearing.toFixed(1)+"°";
-            document.getElementById('dist').innerText = d.dist.toFixed(1)+"m";
-            document.getElementById('wp').innerText = "Node "+(d.wp+1);
-            document.getElementById('direction').innerHTML = d.direction;
-            let inten = d.intensity||0; document.getElementById('intensity').innerHTML = inten+"%"; document.getElementById('intensityFill').style.width = inten+"%";
-            document.getElementById('xte').innerHTML = d.xte.toFixed(1)+"m";
-            document.getElementById('waterTemp').innerHTML = d.waterTemp? d.waterTemp.toFixed(2)+" °C" : "---";
-            document.getElementById('waterPH').innerHTML = d.waterPH? d.waterPH.toFixed(2) : "---";
-            document.getElementById('waterTDS').innerHTML = d.waterTDS? Math.round(d.waterTDS)+" ppm" : "---";
-            if(d.hmRiskLevel) document.getElementById('hmRiskLevel').innerHTML = d.hmRiskLevel;
-            if(d.hmRiskScore) document.getElementById('hmRiskScore').innerHTML = "Score: "+d.hmRiskScore+"/100";
-            if(d.hmRiskReasons) document.getElementById('hmRiskReasons').innerHTML = d.hmRiskReasons.join(' | ');
-            let error = d.tbrng - d.head; if(error>180) error-=360; if(error<-180) error+=360;
-            document.getElementById('err').innerHTML = error.toFixed(1)+"°";
-            document.getElementById('time').innerHTML = new Date().toLocaleTimeString();
-            createBearingVisual(d.relBearing);
-            if(d.thrL) { document.getElementById('thrLeftVal').innerText = d.thrL+" µs"; document.getElementById('leftThrottle').value = d.thrL; }
-            if(d.thrR) { document.getElementById('thrRightVal').innerText = d.thrR+" µs"; document.getElementById('rightThrottle').value = d.thrR; }
-            if(d.manual) document.getElementById('manualOverrideVal').innerText = d.manual?"ON":"OFF";
-            if(d.servoOn !== undefined) document.getElementById('servoToggle').checked = (d.servoOn==1);
-            if(hasFix) {
-                usvIcon.setLatLng([d.lat,d.lng]);
-                if(autoZoomEnabled) centerAndZoom(19);
-                else if(!initialZoomDone && d.lat!=0) { centerAndZoom(18); initialZoomDone=true; }
-                if(d.tbrng>0 && d.wp>=0) fetch('/path').then(r=>r.json()).then(pathData=>{ if(pathData[d.wp]) targetLine.setLatLngs([[d.lat,d.lng],[pathData[d.wp].lat,pathData[d.wp].lng]]); });
-            }
-            let loraText = (d.rxAge && d.rxAge<2000) ? `LoRa: OK (${d.rxAge}ms)` : 'LoRa: LOST';
-            document.getElementById('loraStat').innerText = loraText;
-            let gpsText = hasFix ? `GPS: FIXED (${d.gpsSats||0} sat)` : 'GPS: NO FIX';
-            document.getElementById('gpsStatus').innerText = gpsText;
-        }).catch(e=>console.warn);
-    }, 500);
+  if (document.getElementById('map')) {
+    usvMap = L.map('map').setView([14.5915, 121.0965], 18);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 21 }).addTo(usvMap);
+    usvIcon = L.circleMarker([0, 0], { radius: 7, color: '#f43f5e', fillColor: '#f43f5e', fillOpacity: 1, weight: 3 }).addTo(usvMap);
+    route = L.polyline([], { color: '#00d4b8', weight: 2.5, opacity: 0.85 }).addTo(usvMap);
+    targetLine = L.polyline([], { color: '#f59e0b', weight: 2, dashArray: '6,10', opacity: 0.8 }).addTo(usvMap);
+    usvMap.on('click', e => {
+      fetch(`/addWP?lat=${e.latlng.lat}&lng=${e.latlng.lng}`).then(() => { updateWaypointMarkers(); updatePath(); });
+    });
+    updatePath(); updateWaypointMarkers();
+  }
 
-    // ==================== NANOPLASTIC DETECTION SCRIPT (unchanged, but safe) ====================
-    const API_BASE = '';
-    function setCaptureStatus(msg, isError=false) { let el = document.getElementById('captureStatus'); if(!el) return; el.innerText = msg; el.className = 'badge '+(isError?'bg-danger':'bg-secondary'); if(!isError) setTimeout(()=>{ if(el.innerText===msg) el.innerText='Ready'; }, 5000); }
-    async function triggerCapture() {
-        let btn = document.getElementById('captureBtn'); if(!btn) return;
-        btn.disabled = true; setCaptureStatus('Starting capture...');
-        try {
-            let res = await fetch(`${API_BASE}/trigger_capture`, {method:'POST'});
-            if(res.status===202) { setCaptureStatus('Capture started, processing...'); await pollCaptureStatus(); }
-            else { let err = await res.json(); setCaptureStatus(`Error: ${err.error||'Unknown'}`, true); btn.disabled = false; }
-        } catch(e) { setCaptureStatus(`Request failed: ${e.message}`, true); btn.disabled = false; }
-    }
-    async function pollCaptureStatus() {
-        let attempts=0, maxAttempts=60;
-        let interval = setInterval(async ()=>{
-            try {
-                let res = await fetch(`${API_BASE}/api/capture_status`);
-                let data = await res.json();
-                if(!data.is_processing) {
-                    clearInterval(interval);
-                    document.getElementById('captureBtn').disabled = false;
-                    if(data.last_result) { setCaptureStatus('✅ Capture complete!'); refreshAll(); }
-                    else if(data.error) setCaptureStatus(`Failed: ${data.error}`, true);
-                    else setCaptureStatus('No result', true);
-                } else { attempts++; setCaptureStatus(`Processing... (${attempts*5}s)`); if(attempts>=maxAttempts) { clearInterval(interval); document.getElementById('captureBtn').disabled=false; setCaptureStatus('Timeout', true); } }
-            } catch(e) { clearInterval(interval); document.getElementById('captureBtn').disabled=false; setCaptureStatus(`Poll error: ${e.message}`, true); }
-        }, 5000);
-    }
-    async function fetchStats() {
-        try { let res = await fetch(`${API_BASE}/api/stats`); let stats = await res.json(); document.getElementById('totalSamples').innerText = stats.total_samples||0; document.getElementById('avgParticles').innerText = stats.avg_particles||0; document.getElementById('highRiskCount').innerText = stats.high_risk_count||0; document.getElementById('maxParticles').innerText = stats.max_particles||0; } catch(e) { console.warn(e); }
-    }
-    async function fetchLatestImage() {
-        try { let res = await fetch(`${API_BASE}/api/latest_image`); let data = await res.json(); let img = document.getElementById('latestImage'); let noImg = document.getElementById('noImageMessage'); if(data.filename) { img.src = `/images/processed/${data.filename}?t=${Date.now()}`; img.style.display='block'; if(noImg) noImg.style.display='none'; } else { img.style.display='none'; if(noImg) noImg.style.display='block'; } } catch(e) { console.warn(e); }
-    }
-    async function fetchDetections() {
-        try {
-            let res = await fetch(`${API_BASE}/api/detections`);
-            let detections = await res.json();
-            if(detections.length>0) {
-                let latest = detections[detections.length-1];
-                document.getElementById('particleCount').innerText = latest.particle_count||0;
-                document.getElementById('concentration').innerHTML = latest.estimated_concentration_ug_L ? latest.estimated_concentration_ug_L+" µg/L" : '---';
-                document.getElementById('intensity').innerText = latest.mean_intensity||'---';
-                document.getElementById('confidence').innerText = latest.avg_confidence||'---';
-                let risk = latest.risk_level||'LOW'; let riskEl = document.getElementById('riskLevel'); riskEl.innerText = risk; riskEl.className = `fw-bold text-${risk==='HIGH'?'danger':risk==='MEDIUM'?'warning':'success'}`;
-                // timestampDisplay no longer needed but we keep it for safety
-                let timeStr = latest.timestamp ? latest.timestamp.substr(8,6).replace(/(..)(..)(..)/,'$1:$2:$3') : '--:--:--';
-                let tsEl = document.getElementById('timestampDisplay');
-                if(tsEl) tsEl.innerText = timeStr;
-                let tbody = document.getElementById('historyBody');
-                let recent = detections.slice(-20).reverse();
-                if(recent.length===0) tbody.innerHTML = '<tr><td colspan="6" class="text-center">No data yet</td></tr>';
-                else tbody.innerHTML = recent.map(d=>{ let t = d.timestamp ? d.timestamp.substr(8,6).replace(/(..)(..)(..)/,'$1:$2:$3') : '--:--:--'; let riskClass = (d.risk_level||'low').toLowerCase(); return `<tr><td>${t}</td><td>${d.particle_count||0}</td><td>${d.estimated_concentration_ug_L||'?'}</td><td>${d.mean_intensity||'---'}</td><td>${d.avg_confidence||'---'}</td><td><span class="badge bg-${riskClass==='high'?'danger':riskClass==='medium'?'warning':'success'}">${d.risk_level||'LOW'}</span></td></tr>`; }).join('');
-            } else { document.getElementById('historyBody').innerHTML = '<tr><td colspan="6" class="text-center">No detections yet</td></tr>'; }
-        } catch(e) { console.warn(e); }
-    }
-    async function refreshAll() { await fetchStats(); await fetchLatestImage(); await fetchDetections(); }
-    document.getElementById('captureBtn')?.addEventListener('click', triggerCapture);
-    refreshAll();
-    setInterval(refreshAll, 5000);
+  /* ── TELEMETRY POLL ── */
+  setInterval(() => {
+    fetch('/data').then(r => r.json()).then(d => {
+      let hasFix = (d.gpsValid == 1) || (d.lat != 0 && d.lng != 0);
+      document.getElementById('lat').innerText        = hasFix ? d.lat.toFixed(6) : '---';
+      document.getElementById('lon').innerText        = hasFix ? d.lng.toFixed(6) : '---';
+      document.getElementById('head').innerText       = d.head.toFixed(1) + "°";
+      document.getElementById('tbrng').innerText      = d.tbrng.toFixed(1) + "°";
+      document.getElementById('relBearing').innerText = d.relBearing.toFixed(1) + "°";
+      document.getElementById('dist').innerText       = d.dist.toFixed(1) + "m";
+      document.getElementById('wp').innerText         = "Node " + (d.wp + 1);
+      document.getElementById('direction').innerText  = d.direction;
+      let inten = d.intensity || 0;
+      document.getElementById('intensity').innerText  = inten + "%";
+      document.getElementById('intensityFill').style.width = inten + "%";
+      document.getElementById('xte').innerText        = d.xte.toFixed(1) + "m";
+      document.getElementById('waterTemp').innerText  = d.waterTemp ? d.waterTemp.toFixed(2) + " °C" : "---";
+      document.getElementById('waterPH').innerText    = d.waterPH ? d.waterPH.toFixed(2) : "---";
+      document.getElementById('waterTDS').innerText   = d.waterTDS ? Math.round(d.waterTDS) + " ppm" : "---";
+      if (d.hmRiskLevel)   document.getElementById('hmRiskLevel').innerText   = d.hmRiskLevel;
+      if (d.hmRiskScore)   document.getElementById('hmRiskScore').innerText   = "Score: " + d.hmRiskScore + "/100";
+      if (d.hmRiskReasons) document.getElementById('hmRiskReasons').innerText = d.hmRiskReasons.join(' · ');
+      let error = d.tbrng - d.head; if (error > 180) error -= 360; if (error < -180) error += 360;
+      document.getElementById('err').innerText = error.toFixed(1) + "°";
+      document.getElementById('time').innerText = new Date().toLocaleTimeString();
+      createBearingVisual(d.relBearing);
+      if (d.thrL && !throttleDragging) { document.getElementById('thrLeftVal').innerText  = d.thrL + " µs"; document.getElementById('leftThrottle').value  = d.thrL; }
+      if (d.thrR && !throttleDragging) { document.getElementById('thrRightVal').innerText = d.thrR + " µs"; document.getElementById('rightThrottle').value = d.thrR; }
+      if (d.manual !== undefined) document.getElementById('manualOverrideVal').innerText = d.manual ? "ON" : "OFF";
+      if (d.servoOn !== undefined) document.getElementById('servoToggle').checked = (d.servoOn == 1);
+      if (hasFix) {
+        usvIcon.setLatLng([d.lat, d.lng]);
+        if (autoZoomEnabled) centerAndZoom(19);
+        else if (!initialZoomDone && d.lat != 0) { centerAndZoom(18); initialZoomDone = true; }
+        if (d.tbrng > 0 && d.wp >= 0) fetch('/path').then(r => r.json()).then(pathData => {
+          if (pathData[d.wp]) targetLine.setLatLngs([[d.lat, d.lng], [pathData[d.wp].lat, pathData[d.wp].lng]]);
+        });
+      }
+      let loraStr = (d.rxAge && d.rxAge < 2000) ? `LoRa: OK (${d.rxAge}ms)` : 'LoRa: LOST';
+      let gpsStr  = hasFix ? `GPS: FIXED (${d.gpsSats || 0}sat)` : 'GPS: NO FIX';
+      document.getElementById('loraStat').innerText    = loraStr;
+      document.getElementById('gpsStatus').innerText   = gpsStr;
+      document.getElementById('loraStatMob').innerText = loraStr.replace('LoRa: ', '');
+      document.getElementById('gpsStatMob').innerText  = gpsStr.replace('GPS: ', '');
+    }).catch(e => console.warn(e));
+  }, 500);
 
-    // ==================== HEAVY METAL LOG ====================
-    async function fetchHeavyMetalLog() {
-        try {
-            let res = await fetch(`${API_BASE}/api/heavy_metal_log`);
-            let data = await res.json();
-            let tbody = document.getElementById('hmLogBody');
-            if(!data || data.length===0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No log entries yet</td></tr>';
-                return;
-            }
-            let rows = data.map(r=>`<tr><td>${r.Date}</td><td>${r.Time}</td><td>${r['TDS (ppm)']}</td><td>${r.pH}</td><td>${r['Temp (°C)']}</td><td>${r.Risk}</td></tr>`).join('');
-            tbody.innerHTML = rows;
-        } catch(e) { console.warn(e); }
-    }
-    fetchHeavyMetalLog();
-    setInterval(fetchHeavyMetalLog, 30000);  // refresh every 30 seconds
+  /* ── NANOPLASTIC ── */
+  const API_BASE = '';
+  function setCaptureStatus(msg, isError = false) {
+    let el = document.getElementById('captureStatus'); if (!el) return;
+    el.innerText = msg; el.style.color = isError ? 'var(--rose)' : 'var(--text-sub)';
+    if (!isError) setTimeout(() => { if (el.innerText === msg) el.innerText = 'Ready'; }, 5000);
+  }
+  async function triggerCapture() {
+    let btn = document.getElementById('captureBtn'); btn.disabled = true; setCaptureStatus('Starting…');
+    try {
+      let res = await fetch(`${API_BASE}/trigger_capture`, { method: 'POST' });
+      if (res.status === 202) { setCaptureStatus('Processing…'); await pollCaptureStatus(); }
+      else { let err = await res.json(); setCaptureStatus(`Error: ${err.error || 'Unknown'}`, true); btn.disabled = false; }
+    } catch (e) { setCaptureStatus('Request failed', true); btn.disabled = false; }
+  }
+  async function pollCaptureStatus() {
+    let attempts = 0, maxAttempts = 60;
+    let interval = setInterval(async () => {
+      try {
+        let res = await fetch(`${API_BASE}/api/capture_status`); let data = await res.json();
+        if (!data.is_processing) {
+          clearInterval(interval); document.getElementById('captureBtn').disabled = false;
+          if (data.last_result) { setCaptureStatus('✓ Complete'); refreshAll(); }
+          else if (data.error) setCaptureStatus('Failed', true);
+          else setCaptureStatus('No result', true);
+        } else {
+          attempts++; setCaptureStatus(`Processing (${attempts * 5}s)`);
+          if (attempts >= maxAttempts) { clearInterval(interval); document.getElementById('captureBtn').disabled = false; setCaptureStatus('Timeout', true); }
+        }
+      } catch (e) { clearInterval(interval); document.getElementById('captureBtn').disabled = false; setCaptureStatus('Poll error', true); }
+    }, 5000);
+  }
+  async function fetchStats() {
+    try {
+      let res = await fetch(`${API_BASE}/api/stats`); let stats = await res.json();
+      document.getElementById('totalSamples').innerText  = stats.total_samples || 0;
+      document.getElementById('avgParticles').innerText  = stats.avg_particles || 0;
+      document.getElementById('highRiskCount').innerText = stats.high_risk_count || 0;
+      document.getElementById('maxParticles').innerText  = stats.max_particles || 0;
+    } catch (e) { console.warn(e); }
+  }
+  async function fetchLatestImage() {
+    try {
+      let res = await fetch(`${API_BASE}/api/latest_image`); let data = await res.json();
+      let img = document.getElementById('latestImage'); let noImg = document.getElementById('noImageMessage');
+      if (data.filename) { img.src = `/images/processed/${data.filename}?t=${Date.now()}`; img.style.display = 'block'; if (noImg) noImg.style.display = 'none'; }
+      else { img.style.display = 'none'; if (noImg) noImg.style.display = 'flex'; }
+    } catch (e) { console.warn(e); }
+  }
+  async function fetchDetections() {
+    try {
+      let res = await fetch(`${API_BASE}/api/detections`); let detections = await res.json();
+      if (detections.length > 0) {
+        let latest = detections[detections.length - 1];
+        document.getElementById('particleCount').innerText  = latest.particle_count || 0;
+        document.getElementById('concentration').innerText  = latest.estimated_concentration_ug_L ? latest.estimated_concentration_ug_L + " µg/L" : '---';
+        document.getElementById('nanointensity').innerText  = latest.mean_intensity || '---';
+        document.getElementById('confidence').innerText     = latest.avg_confidence || '---';
+        let risk = latest.risk_level || 'LOW'; let riskEl = document.getElementById('riskLevel');
+        riskEl.innerText = risk;
+        riskEl.style.color = risk === 'HIGH' ? 'var(--rose)' : risk === 'MEDIUM' ? 'var(--amber)' : 'var(--emerald)';
+        let tbody = document.getElementById('historyBody');
+        let recent = detections.slice(-20).reverse();
+        tbody.innerHTML = recent.length ? recent.map(d => {
+          let t = d.timestamp ? d.timestamp.substr(8, 6).replace(/(..)(..)(..)/,'$1:$2:$3') : '--:--:--';
+          let rc = (d.risk_level || 'low').toLowerCase();
+          return `<tr><td>${t}</td><td>${d.particle_count||0}</td><td>${d.estimated_concentration_ug_L||'?'}</td><td>${d.mean_intensity||'---'}</td><td>${d.avg_confidence||'---'}</td><td><span class="badge badge-${rc}">${d.risk_level||'LOW'}</span></td></tr>`;
+        }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:1.5rem;">No data yet</td></tr>';
+      }
+    } catch (e) { console.warn(e); }
+  }
+  async function refreshAll() { await fetchStats(); await fetchLatestImage(); await fetchDetections(); }
+  document.getElementById('captureBtn')?.addEventListener('click', triggerCapture);
+  refreshAll(); setInterval(refreshAll, 5000);
+
+  /* ── HEAVY METAL LOG ── */
+  async function fetchHeavyMetalLog() {
+    try {
+      let res = await fetch(`${API_BASE}/api/heavy_metal_log`); let data = await res.json();
+      let tbody = document.getElementById('hmLogBody');
+      if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-dim);">No log entries yet</td></tr>'; return; }
+      tbody.innerHTML = data.map(r => {
+        let rc = (r.Risk || '').toLowerCase();
+        return `<tr><td>${r.Date}</td><td>${r.Time}</td><td>${r['TDS (ppm)']}</td><td>${r.pH}</td><td>${r['Temp (°C)']}</td><td><span class="badge badge-${rc}">${r.Risk}</span></td></tr>`;
+      }).join('');
+    } catch (e) { console.warn(e); }
+  }
+  fetchHeavyMetalLog(); setInterval(fetchHeavyMetalLog, 30000);
 </script>
 </body>
 </html>
