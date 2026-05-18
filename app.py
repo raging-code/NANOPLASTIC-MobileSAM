@@ -18,8 +18,8 @@ from mobile_sam import sam_model_registry, SamAutomaticMaskGenerator
 # ==================== CONFIGURATION ====================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Raspberry Pi USV server address (must be reachable)
-RASPI_URL = os.environ.get("RASPI_URL", "http://192.168.0.108:8000/")
+# Raspberry Pi USV server address
+RASPI_URL = os.environ.get("RASPI_URL", "http://192.168.0.100:8000/")
 
 # Nanoplastic configuration
 CAMERA_INDEX = int(os.environ.get('CAMERA_INDEX', 0))
@@ -50,7 +50,7 @@ frame_ready = threading.Event()
 stop_camera = threading.Event()
 camera_available = False
 camera_error_count = 0
-MAX_CAMERA_ERRORS = 3
+MAX_CAMERA_ERRORS = 10
 
 sam = None
 mask_generator = None
@@ -134,55 +134,87 @@ processing_status = {
     "processing_timeout": 120
 }
 
-# ---------- Nanoplastic helper functions (same as before) ----------
-def find_working_camera(max_index=5):
-    print("Scanning for available cameras...")
-    working_indices = []
-    for i in range(max_index):
-        cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
-        if cap.isOpened():
+# ---------- Helper to convert any frame to 3-channel BGR ----------
+def ensure_bgr(frame):
+    if frame is None:
+        return None
+    if len(frame.shape) == 2:
+        return cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+    channels = frame.shape[2] if len(frame.shape) == 3 else 0
+    if channels == 1:
+        return cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+    elif channels == 3:
+        return frame
+    elif channels == 4:
+        return cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+    elif channels == 2:
+        gray = frame[:, :, 0]
+        return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    else:
+        return frame[:, :, :3]
+    return frame
+
+# ---------- Camera Initialization ----------
+def _open_camera_dshow(index, width=640, height=480, fourcc=None):
+    cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+    if not cap.isOpened():
+        return None
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+    if fourcc:
+        cap.set(cv2.CAP_PROP_FOURCC, fourcc)
+    cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.75)
+    cap.set(cv2.CAP_PROP_EXPOSURE, -6)
+    cap.set(cv2.CAP_PROP_BRIGHTNESS, 128)
+    return cap
+
+def _try_name(name):
+    cap = cv2.VideoCapture(name, cv2.CAP_DSHOW)
+    if cap.isOpened():
+        for _ in range(10):
             ret, frame = cap.read()
-            if ret and frame is not None:
-                h, w = frame.shape[:2]
-                print(f"  Camera index {i}: OK (resolution {w}x{h})")
-                working_indices.append(i)
+            if ret and frame is not None and np.mean(frame) > 0.5:
+                cap.release()
+                cap2 = _open_camera_dshow(0, width=640, height=480, fourcc=cv2.VideoWriter_fourcc(*'MJPG'))
+                if cap2 and cap2.isOpened():
+                    return cap2
+                return cv2.VideoCapture(name, cv2.CAP_DSHOW)
+    return None
+
+def find_best_camera():
+    print("Looking for camera...")
+    common_names = ["Integrated Camera", "USB Camera", "HD Webcam", "Webcam", "Camera"]
+    for name in common_names:
+        cap = _try_name(name)
+        if cap is not None:
+            print(f"✓ Using camera: {name}")
+            return cap
+    for idx in range(2):
+        cap = _open_camera_dshow(idx, 640, 480, cv2.VideoWriter_fourcc(*'MJPG'))
+        if cap is not None:
+            for _ in range(30):
+                ret, frame = cap.read()
+                if ret and frame is not None and np.mean(frame) > 0.5:
+                    print(f"✓ Camera index {idx} works at 640x480 MJPG")
+                    return cap
             cap.release()
-        else:
-            print(f"  Camera index {i}: not available")
-    if working_indices:
-        if CAMERA_INDEX in working_indices:
-            return CAMERA_INDEX
-        if 0 in working_indices and len(working_indices) > 1:
-            print("  Built-in camera (index 0) detected. Suggest using USB webcam at index", working_indices[1])
-            return working_indices[1]
-        return working_indices[0]
+    print("No camera found via name or index.")
     return None
 
 def init_camera():
-    camera_idx = find_working_camera()
-    if camera_idx is None:
-        return None
-    print(f"Opening camera index {camera_idx} with resolution {FRAME_WIDTH}x{FRAME_HEIGHT}")
-    cap = cv2.VideoCapture(camera_idx, cv2.CAP_DSHOW)
-    if cap.isOpened():
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
-        actual_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        actual_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        print(f"Camera initialized: requested {FRAME_WIDTH}x{FRAME_HEIGHT}, got {actual_width}x{actual_height}")
-        return cap
-    return None
+    return find_best_camera()
 
+# ---------- Camera worker ----------
 def camera_worker():
     global camera, latest_frame, camera_available, camera_error_count
     consecutive_failures = 0
     while not stop_camera.is_set():
-        if camera is None and camera_error_count < MAX_CAMERA_ERRORS:
+        if camera is None:
             camera = init_camera()
             if camera is None:
                 camera_error_count += 1
                 if camera_error_count >= MAX_CAMERA_ERRORS:
-                    print("Camera unavailable. Using mock frames.")
+                    print("Camera unavailable after max errors. Using mock frames.")
                     camera_available = False
                     mock = np.zeros((FRAME_HEIGHT, FRAME_WIDTH, 3), dtype=np.uint8)
                     cv2.putText(mock, "NO CAMERA", (FRAME_WIDTH//2-100, FRAME_HEIGHT//2),
@@ -196,6 +228,20 @@ def camera_worker():
                 camera_available = True
                 camera_error_count = 0
                 consecutive_failures = 0
+                time.sleep(0.5)
+                for _ in range(20):
+                    ret, test_frame = camera.read()
+                    if ret and test_frame is not None:
+                        mean_val = np.mean(test_frame)
+                        if mean_val > 10:
+                            break
+                else:
+                    camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
+                    for exp in [-4, -5, -6, -7, -8]:
+                        camera.set(cv2.CAP_PROP_EXPOSURE, exp)
+                        ret, test_frame = camera.read()
+                        if ret and test_frame is not None and np.mean(test_frame) > 10:
+                            break
         if camera is None:
             mock = np.zeros((FRAME_HEIGHT, FRAME_WIDTH, 3), dtype=np.uint8)
             cv2.putText(mock, "NO CAMERA", (FRAME_WIDTH//2-100, FRAME_HEIGHT//2),
@@ -207,22 +253,31 @@ def camera_worker():
             continue
         ret, frame = camera.read()
         if ret:
-            if frame.shape[1] != FRAME_WIDTH or frame.shape[0] != FRAME_HEIGHT:
-                frame = cv2.resize(frame, (FRAME_WIDTH, FRAME_HEIGHT))
-            with camera_lock:
-                latest_frame = frame.copy()
-            frame_ready.set()
-            consecutive_failures = 0
+            frame = ensure_bgr(frame)
+            if frame is None:
+                consecutive_failures += 1
+            else:
+                if np.mean(frame) <= 0.5:
+                    consecutive_failures += 1
+                else:
+                    if frame.shape[1] != FRAME_WIDTH or frame.shape[0] != FRAME_HEIGHT:
+                        frame = cv2.resize(frame, (FRAME_WIDTH, FRAME_HEIGHT))
+                    with camera_lock:
+                        latest_frame = frame.copy()
+                    frame_ready.set()
+                    consecutive_failures = 0
+                    continue
         else:
             consecutive_failures += 1
-            if consecutive_failures >= 5:
-                print("Camera read failure, reinitializing...")
+
+        if consecutive_failures >= 15:
+            print("Too many failures, reinitializing camera...")
+            if camera:
                 camera.release()
-                camera = None
-                time.sleep(2)
-            else:
-                time.sleep(0.5)
-        time.sleep(0.03)
+            camera = None
+            time.sleep(2)
+        else:
+            time.sleep(0.5)
     if camera:
         camera.release()
     print("Camera worker stopped")
@@ -234,6 +289,7 @@ def get_latest_frame(timeout=5.0):
                 return latest_frame.copy()
     return None
 
+# --- detection functions with real confidence ---
 def detect_blobs(image_gray, draw_on_image=None):
     inverted = 255 - image_gray
     keypoints = blob_detector.detect(inverted)
@@ -241,7 +297,11 @@ def detect_blobs(image_gray, draw_on_image=None):
     for kp in keypoints:
         x, y = int(kp.pt[0]), int(kp.pt[1])
         size = kp.size
-        confidence = kp.response if hasattr(kp, 'response') and kp.response > 0 else 0.8
+        # Use the actual response, cap at 1.0, fallback to 0.5
+        if hasattr(kp, 'response') and kp.response > 0:
+            confidence = min(kp.response, 1.0)
+        else:
+            confidence = 0.5
         detections.append((x, y, size, confidence))
     annotated = None
     if draw_on_image is not None:
@@ -313,11 +373,11 @@ def count_particles_combined(image_bgr):
         avg_confidence = 0.0
     else:
         avg_intensity = total_intensity / total_count
-        avg_confidence = total_confidence / total_count
+        avg_confidence = (total_confidence / total_count) * 100   # percentage
     max_particles = detection_params.get('max_particles_per_frame', 5000)
     if total_count > max_particles:
         total_count = max_particles
-    return total_count, round(avg_intensity, 3), round(avg_confidence, 3), annotated
+    return total_count, round(avg_intensity, 3), round(avg_confidence, 1), annotated
 
 def count_particles_blob_only(image_bgr):
     gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
@@ -335,11 +395,11 @@ def count_particles_blob_only(image_bgr):
         total_confidence += conf
     if total_count > 0:
         avg_intensity = total_intensity / total_count
-        avg_confidence = total_confidence / total_count
+        avg_confidence = (total_confidence / total_count) * 100
     else:
         avg_intensity = 0.0
         avg_confidence = 0.0
-    return total_count, round(avg_intensity, 3), round(avg_confidence, 3), annotated
+    return total_count, round(avg_intensity, 3), round(avg_confidence, 1), annotated
 
 def count_particles_sam_only(image_bgr):
     image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
@@ -358,11 +418,11 @@ def count_particles_sam_only(image_bgr):
         total_confidence += confidence
     if total_count > 0:
         avg_intensity = total_intensity / total_count
-        avg_confidence = total_confidence / total_count
+        avg_confidence = (total_confidence / total_count) * 100
     else:
         avg_intensity = 0.0
         avg_confidence = 0.0
-    return total_count, round(avg_intensity, 3), round(avg_confidence, 3), annotated
+    return total_count, round(avg_intensity, 3), round(avg_confidence, 1), annotated
 
 def estimate_concentration(particle_count, intensity):
     concentrations = sorted(calibration.keys())
@@ -404,7 +464,10 @@ def process_capture_task():
         else:
             particle_count, mean_intensity, avg_confidence, annotated = count_particles_combined(frame)
         concentration = estimate_concentration(particle_count, mean_intensity)
-        risk_level = 'HIGH' if particle_count > 500 else 'MEDIUM' if particle_count > 100 else 'LOW'
+
+        # Risk thresholds for 1 mL sample
+        risk_level = 'HIGH' if particle_count > 100 else 'MEDIUM' if particle_count > 10 else 'LOW'
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
         raw_filename = f"raw_{timestamp}.jpg"
         processed_filename = f"processed_{timestamp}.jpg"
@@ -469,13 +532,12 @@ def proxy_to_pi(endpoint, method='GET', data=None, params=None):
     except Exception as e:
         return str(e).encode(), 503, 'text/plain'
 
-# ==================== HEAVY METAL LOGGING (every 5 minutes) ====================
+# ==================== HEAVY METAL LOGGING ====================
 latest_telemetry = None
 
 @app.route('/data')
 def proxy_data():
     content, status, ctype = proxy_to_pi('/data')
-    # Cache latest telemetry for heavy metal logging
     if status == 200 and ctype == 'application/json':
         try:
             data = json.loads(content.decode('utf-8'))
@@ -487,7 +549,7 @@ def proxy_data():
 
 def heavy_metal_logger():
     while True:
-        time.sleep(300)  # 5 minutes
+        time.sleep(300)
         if latest_telemetry:
             water_temp = latest_telemetry.get('waterTemp', '')
             water_ph = latest_telemetry.get('waterPH', '')
@@ -507,7 +569,6 @@ def heavy_metal_logger():
 # ==================== NEW ENDPOINTS ====================
 @app.route('/api/latest_image')
 def api_latest_image():
-    """Return the filename of the most recent processed image."""
     if not os.path.exists(PROCESSED_FOLDER):
         return jsonify({'filename': None})
     files = [f for f in os.listdir(PROCESSED_FOLDER) if f.startswith('processed_') and f.endswith('.jpg')]
@@ -518,7 +579,6 @@ def api_latest_image():
 
 @app.route('/api/heavy_metal_log')
 def api_heavy_metal_log():
-    """Return the contents of heavy_metal_log.csv as JSON."""
     csv_file = os.path.join(BASE_DIR, 'heavy_metal_log.csv')
     if not os.path.exists(csv_file):
         return jsonify([])
@@ -534,15 +594,13 @@ def api_heavy_metal_log():
                 'Temp (°C)': row.get('Temp (°C)', ''),
                 'Risk': row.get('Risk', '')
             })
-    # Return last 100 entries
     return jsonify(data[-100:])
 
-# ==================== FLASK ROUTES (unchanged) ====================
+# ==================== FLASK ROUTES ====================
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# ---------- Proxy routes for USV ----------
 @app.route('/path')
 def proxy_path():
     content, status, ctype = proxy_to_pi('/path')
@@ -622,7 +680,7 @@ def proxy_cmd():
     content, status, ctype = proxy_to_pi('/cmd', method='POST', data=data)
     return Response(content, status=status, mimetype=ctype)
 
-# ---------- Nanoplastic routes (unchanged) ----------
+# ---------- Nanoplastic routes ----------
 @app.route('/images/processed/<filename>')
 def serve_processed(filename):
     return send_from_directory(PROCESSED_FOLDER, filename)
@@ -648,7 +706,10 @@ def capture_and_analyze():
         else:
             particle_count, mean_intensity, avg_confidence, annotated = count_particles_combined(frame)
         concentration = estimate_concentration(particle_count, mean_intensity)
-        risk_level = 'HIGH' if particle_count > 500 else 'MEDIUM' if particle_count > 100 else 'LOW'
+
+        # Risk thresholds for 1 mL sample
+        risk_level = 'HIGH' if particle_count > 100 else 'MEDIUM' if particle_count > 10 else 'LOW'
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
         raw_path = os.path.join(app.config['UPLOAD_FOLDER'], f"raw_{timestamp}.jpg")
         proc_path = os.path.join(PROCESSED_FOLDER, f"processed_{timestamp}.jpg")
@@ -704,11 +765,14 @@ def trigger_capture_async():
 @app.route('/api/capture_status', methods=['GET'])
 def get_capture_status():
     with processing_lock:
-        return jsonify({
+        resp = {
             'is_processing': processing_status["is_processing"],
             'last_result': processing_status["last_result"],
             'error': processing_status["error"]
-        })
+        }
+        if processing_status["is_processing"] and processing_status["start_time"]:
+            resp['elapsed_seconds'] = round(time.time() - processing_status["start_time"])
+        return jsonify(resp)
 
 @app.route('/api/reset_processing', methods=['POST'])
 def reset_processing():
@@ -806,9 +870,8 @@ if __name__ == '__main__':
     print(f"Detection mode: {DETECTION_MODE}")
     print("=" * 60)
     start_camera_thread()
-    # Start heavy metal logger thread
     hm_thread = threading.Thread(target=heavy_metal_logger, daemon=True)
     hm_thread.start()
     print("Heavy metal logger started (every 5 min).")
     print("Server running at http://localhost:5000")
-    serve(app, host='0.0.0.0', port=5000, threads=4)
+    serve(app, host='0.0.0.0', port=5000, threads=8)

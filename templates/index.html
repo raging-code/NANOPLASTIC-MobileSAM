@@ -1101,94 +1101,182 @@
     }).catch(e => console.warn(e));
   }, 500);
 
-  /* ── NANOPLASTIC ── */
+  /* ═══════════════════════════════════════════════
+     NANOPLASTIC – REAL CONFIDENCE & INSTANT UPDATES
+     ═══════════════════════════════════════════════ */
   const API_BASE = '';
+
   function setCaptureStatus(msg, isError = false) {
-    let el = document.getElementById('captureStatus'); if (!el) return;
-    el.innerText = msg; el.style.color = isError ? 'var(--rose)' : 'var(--text-sub)';
-    if (!isError) setTimeout(() => { if (el.innerText === msg) el.innerText = 'Ready'; }, 5000);
+    let el = document.getElementById('captureStatus');
+    if (!el) return;
+    el.innerText = msg;
+    el.style.color = isError ? 'var(--rose)' : 'var(--text-sub)';
   }
+
+  let captureInProgress = false;
+
   async function triggerCapture() {
-    let btn = document.getElementById('captureBtn'); btn.disabled = true; setCaptureStatus('Starting…');
+    if (captureInProgress) return;
+    let btn = document.getElementById('captureBtn');
+    if (!btn) return;
+    btn.disabled = true;
+    captureInProgress = true;
+    setCaptureStatus('CAPTURING');
+
     try {
       let res = await fetch(`${API_BASE}/trigger_capture`, { method: 'POST' });
-      if (res.status === 202) { setCaptureStatus('Processing…'); await pollCaptureStatus(); }
-      else { let err = await res.json(); setCaptureStatus(`Error: ${err.error || 'Unknown'}`, true); btn.disabled = false; }
-    } catch (e) { setCaptureStatus('Request failed', true); btn.disabled = false; }
+      if (res.status === 202) {
+        await pollCaptureStatus();
+      } else {
+        let err = await res.json();
+        setCaptureStatus(`Error: ${err.error || 'Unknown'}`, true);
+        btn.disabled = false;
+        captureInProgress = false;
+      }
+    } catch (e) {
+      setCaptureStatus('Request failed', true);
+      btn.disabled = false;
+      captureInProgress = false;
+    }
   }
+
   async function pollCaptureStatus() {
-    let attempts = 0, maxAttempts = 60;
-    let interval = setInterval(async () => {
-      try {
-        let res = await fetch(`${API_BASE}/api/capture_status`); let data = await res.json();
-        if (!data.is_processing) {
-          clearInterval(interval); document.getElementById('captureBtn').disabled = false;
-          if (data.last_result) { setCaptureStatus('✓ Complete'); refreshAll(); }
-          else if (data.error) setCaptureStatus('Failed', true);
-          else setCaptureStatus('No result', true);
-        } else {
-          attempts++; setCaptureStatus(`Processing (${attempts * 5}s)`);
-          if (attempts >= maxAttempts) { clearInterval(interval); document.getElementById('captureBtn').disabled = false; setCaptureStatus('Timeout', true); }
+    let attempts = 0;
+    const maxAttempts = 120;
+
+    return new Promise((resolve) => {
+      let interval = setInterval(async () => {
+        attempts++;
+        try {
+          let res = await fetch(`${API_BASE}/api/capture_status`);
+          let data = await res.json();
+
+          if (!data.is_processing) {
+            clearInterval(interval);
+            document.getElementById('captureBtn').disabled = false;
+            captureInProgress = false;
+
+            if (data.last_result) {
+              setCaptureStatus('✓ Complete');
+              await refreshAll();
+            } else if (data.error) {
+              setCaptureStatus(`Failed: ${data.error}`, true);
+            } else {
+              setCaptureStatus('No result', true);
+            }
+            resolve();
+          } else {
+            let elapsed = data.elapsed_seconds || attempts;
+            setCaptureStatus(`PROCESSING (${elapsed}s)`);
+
+            if (attempts >= maxAttempts) {
+              clearInterval(interval);
+              document.getElementById('captureBtn').disabled = false;
+              captureInProgress = false;
+              setCaptureStatus('Timeout', true);
+              resolve();
+            }
+          }
+        } catch (e) {
+          clearInterval(interval);
+          document.getElementById('captureBtn').disabled = false;
+          captureInProgress = false;
+          setCaptureStatus('Poll error', true);
+          resolve();
         }
-      } catch (e) { clearInterval(interval); document.getElementById('captureBtn').disabled = false; setCaptureStatus('Poll error', true); }
-    }, 5000);
+      }, 1000);
+    });
   }
+
   async function fetchStats() {
     try {
-      let res = await fetch(`${API_BASE}/api/stats`); let stats = await res.json();
+      let res = await fetch(`${API_BASE}/api/stats`);
+      let stats = await res.json();
       document.getElementById('totalSamples').innerText  = stats.total_samples || 0;
       document.getElementById('avgParticles').innerText  = stats.avg_particles || 0;
       document.getElementById('highRiskCount').innerText = stats.high_risk_count || 0;
       document.getElementById('maxParticles').innerText  = stats.max_particles || 0;
     } catch (e) { console.warn(e); }
   }
+
   async function fetchLatestImage() {
     try {
-      let res = await fetch(`${API_BASE}/api/latest_image`); let data = await res.json();
-      let img = document.getElementById('latestImage'); let noImg = document.getElementById('noImageMessage');
-      if (data.filename) { img.src = `/images/processed/${data.filename}?t=${Date.now()}`; img.style.display = 'block'; if (noImg) noImg.style.display = 'none'; }
-      else { img.style.display = 'none'; if (noImg) noImg.style.display = 'flex'; }
+      let res = await fetch(`${API_BASE}/api/latest_image`);
+      let data = await res.json();
+      let img = document.getElementById('latestImage');
+      let noImg = document.getElementById('noImageMessage');
+      if (data.filename) {
+        img.src = `/images/processed/${data.filename}?t=${Date.now()}`;
+        img.style.display = 'block';
+        if (noImg) noImg.style.display = 'none';
+      } else {
+        img.style.display = 'none';
+        if (noImg) noImg.style.display = 'flex';
+      }
     } catch (e) { console.warn(e); }
   }
+
   async function fetchDetections() {
     try {
-      let res = await fetch(`${API_BASE}/api/detections`); let detections = await res.json();
+      let res = await fetch(`${API_BASE}/api/detections`);
+      let detections = await res.json();
       if (detections.length > 0) {
         let latest = detections[detections.length - 1];
         document.getElementById('particleCount').innerText  = latest.particle_count || 0;
         document.getElementById('concentration').innerText  = latest.estimated_concentration_ug_L ? latest.estimated_concentration_ug_L + " µg/L" : '---';
         document.getElementById('nanointensity').innerText  = latest.mean_intensity || '---';
-        document.getElementById('confidence').innerText     = latest.avg_confidence || '---';
-        let risk = latest.risk_level || 'LOW'; let riskEl = document.getElementById('riskLevel');
+        document.getElementById('confidence').innerText     = latest.avg_confidence ? latest.avg_confidence + '%' : '---';
+        let risk = latest.risk_level || 'LOW';
+        let riskEl = document.getElementById('riskLevel');
         riskEl.innerText = risk;
         riskEl.style.color = risk === 'HIGH' ? 'var(--rose)' : risk === 'MEDIUM' ? 'var(--amber)' : 'var(--emerald)';
+
         let tbody = document.getElementById('historyBody');
         let recent = detections.slice(-20).reverse();
         tbody.innerHTML = recent.length ? recent.map(d => {
           let t = d.timestamp ? d.timestamp.substr(8, 6).replace(/(..)(..)(..)/,'$1:$2:$3') : '--:--:--';
           let rc = (d.risk_level || 'low').toLowerCase();
-          return `<tr><td>${t}</td><td>${d.particle_count||0}</td><td>${d.estimated_concentration_ug_L||'?'}</td><td>${d.mean_intensity||'---'}</td><td>${d.avg_confidence||'---'}</td><td><span class="badge badge-${rc}">${d.risk_level||'LOW'}</span></td></tr>`;
+          return `<tr>
+            <td>${t}</td>
+            <td>${d.particle_count||0}</td>
+            <td>${d.estimated_concentration_ug_L||'?'}</td>
+            <td>${d.mean_intensity||'---'}</td>
+            <td>${d.avg_confidence ? d.avg_confidence+'%' : '---'}</td>
+            <td><span class="badge badge-${rc}">${d.risk_level||'LOW'}</span></td>
+          </tr>`;
         }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:1.5rem;">No data yet</td></tr>';
       }
     } catch (e) { console.warn(e); }
   }
-  async function refreshAll() { await fetchStats(); await fetchLatestImage(); await fetchDetections(); }
+
+  async function refreshAll() {
+    await fetchStats();
+    await fetchLatestImage();
+    await fetchDetections();
+  }
+
   document.getElementById('captureBtn')?.addEventListener('click', triggerCapture);
-  refreshAll(); setInterval(refreshAll, 5000);
+  refreshAll();
+  setInterval(refreshAll, 5000);
 
   /* ── HEAVY METAL LOG ── */
   async function fetchHeavyMetalLog() {
     try {
-      let res = await fetch(`${API_BASE}/api/heavy_metal_log`); let data = await res.json();
+      let res = await fetch(`${API_BASE}/api/heavy_metal_log`);
+      let data = await res.json();
       let tbody = document.getElementById('hmLogBody');
-      if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-dim);">No log entries yet</td></tr>'; return; }
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-dim);">No log entries yet</td></tr>';
+        return;
+      }
       tbody.innerHTML = data.map(r => {
         let rc = (r.Risk || '').toLowerCase();
         return `<tr><td>${r.Date}</td><td>${r.Time}</td><td>${r['TDS (ppm)']}</td><td>${r.pH}</td><td>${r['Temp (°C)']}</td><td><span class="badge badge-${rc}">${r.Risk}</span></td></tr>`;
       }).join('');
     } catch (e) { console.warn(e); }
   }
-  fetchHeavyMetalLog(); setInterval(fetchHeavyMetalLog, 30000);
+  fetchHeavyMetalLog();
+  setInterval(fetchHeavyMetalLog, 30000);
 </script>
 </body>
 </html>
