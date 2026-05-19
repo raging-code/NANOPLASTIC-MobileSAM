@@ -6,75 +6,73 @@
   <title>AquaScan · USV Command</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 
   <style>
+    /* ═══════════════════════════════════════════
+       ATLAS DESIGN SYSTEM — AquaScan USV v2.1
+       Fonts: Rajdhani (UI) + JetBrains Mono (data)
+    ═══════════════════════════════════════════ */
     :root {
-      --bg:           #040812;
-      --surface:      #070d1c;
-      --glass:        rgba(9, 16, 34, 0.75);
-      --glass-light:  rgba(14, 24, 50, 0.6);
-      --panel:        rgba(10, 18, 38, 0.9);
-      --border:       rgba(0, 210, 185, 0.12);
-      --border-dim:   rgba(255, 255, 255, 0.055);
-      --border-glow:  rgba(0, 210, 185, 0.35);
-      --teal:         #00d4b8;
-      --teal-dim:     rgba(0, 212, 184, 0.07);
-      --teal-glow:    rgba(0, 212, 184, 0.25);
-      --teal-bright:  #2fffd8;
-      --indigo:       #6366f1;
-      --indigo-dim:   rgba(99, 102, 241, 0.08);
-      --amber:        #f59e0b;
-      --amber-dim:    rgba(245, 158, 11, 0.1);
-      --rose:         #f43f5e;
-      --rose-dim:     rgba(244, 63, 94, 0.1);
-      --emerald:      #10b981;
-      --emerald-dim:  rgba(16, 185, 129, 0.1);
-      --text:         #f0f7ff;
-      --text-sub:     #8aacbf;
-      --text-dim:     #4e6e85;
-      --mono:         'JetBrains Mono', monospace;
-      --ui:           'DM Sans', sans-serif;
-      --brand:        'Exo 2', sans-serif;
-      --sidebar-w:    230px;
-      --topbar-h:     60px;
-      --mobtab-h:     56px;
+      --c:           #00E5B4;
+      --c-dim:       rgba(0,229,180,.07);
+      --c-glow:      rgba(0,229,180,.22);
+      --c-soft:      rgba(0,229,180,.55);
+      --amber:       #FFB627;
+      --amber-dim:   rgba(255,182,39,.08);
+      --red:         #FF3555;
+      --red-dim:     rgba(255,53,85,.08);
+      --green:       #2AFC6A;
+      --green-dim:   rgba(42,252,106,.08);
+      --indigo:      #6366f1;
+      --bg:          #02060E;
+      --glass:       rgba(3,8,22,.9);
+      --glass-ov:    rgba(2,5,16,.88);
+      --border:      rgba(0,229,180,.13);
+      --border2:     rgba(0,229,180,.07);
+      --text:        #D4F2EA;
+      --text-sub:    rgba(212,242,234,.52);
+      --text-dim:    rgba(212,242,234,.24);
+      --mono:        'JetBrains Mono', monospace;
+      --ui:          'Rajdhani', sans-serif;
+      --sidebar-w:   222px;
+      --topbar-h:    52px;
+      --mobtab-h:    54px;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { height: 100%; }
+    html, body { height: 100%; }
 
     body {
       font-family: var(--ui);
       background: var(--bg);
       color: var(--text);
       -webkit-font-smoothing: antialiased;
-      min-height: 100%;
       overflow: hidden;
     }
 
-    /* ── LAYERED BACKGROUND ── */
+    /* Atmosphere */
     body::before {
       content: '';
       position: fixed; inset: 0; pointer-events: none; z-index: 0;
       background:
-        radial-gradient(ellipse 80% 60% at 75% -10%, rgba(0, 212, 184, 0.055) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 50% at -10% 60%, rgba(99, 102, 241, 0.05) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 50% at 50% 110%, rgba(0, 80, 120, 0.12) 0%, transparent 60%);
+        radial-gradient(ellipse 160% 80% at 68% -12%, rgba(0,80,200,.08) 0%, transparent 52%),
+        radial-gradient(ellipse 80% 70% at -4% 65%,   rgba(0,229,180,.05) 0%, transparent 48%),
+        radial-gradient(ellipse 60% 60% at 50% 110%,  rgba(0,50,110,.08)  0%, transparent 58%);
     }
 
-    /* Subtle dot grid */
+    /* Grid overlay */
     body::after {
       content: '';
       position: fixed; inset: 0; pointer-events: none; z-index: 0;
-      background-image: radial-gradient(circle, rgba(0, 212, 184, 0.08) 1px, transparent 1px);
-      background-size: 32px 32px;
-      mask-image: radial-gradient(ellipse 100% 100% at 50% 0%, black 20%, transparent 80%);
+      background-image:
+        linear-gradient(rgba(0,229,180,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,180,.03) 1px, transparent 1px);
+      background-size: 44px 44px;
     }
 
     /* ── SHELL ── */
@@ -89,507 +87,601 @@
     /* ── TOPBAR ── */
     #topbar {
       grid-column: 1 / -1;
-      display: flex; align-items: center; gap: 1rem;
-      padding: 0 1.5rem;
-      background: rgba(5, 10, 22, 0.9);
+      display: flex; align-items: center; gap: .9rem;
+      padding: 0 1.25rem;
+      background: rgba(2,5,16,.96);
       border-bottom: 1px solid var(--border);
       position: relative; z-index: 10;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
     }
     #topbar::after {
       content: '';
       position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent 0%, var(--teal) 30%, var(--indigo) 70%, transparent 100%);
-      opacity: 0.4;
+      background: linear-gradient(90deg, transparent, var(--c) 30%, rgba(0,120,255,.55) 70%, transparent);
+      opacity: .32;
     }
 
-    .brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+    .brand { display: flex; align-items: center; gap: .65rem; text-decoration: none; flex-shrink: 0; }
     .brand-icon {
-      width: 36px; height: 36px; flex-shrink: 0;
-      background: linear-gradient(135deg, var(--teal), #007a6e);
-      border-radius: 9px; display: flex; align-items: center; justify-content: center;
-      font-size: 1rem; color: var(--bg);
-      box-shadow: 0 0 20px var(--teal-glow), inset 0 1px 0 rgba(255,255,255,0.2);
-      position: relative;
-    }
-    .brand-icon::after {
-      content: ''; position: absolute; inset: 0; border-radius: 9px;
-      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+      width: 32px; height: 32px;
+      background: rgba(0,229,180,.1); border: 1px solid rgba(0,229,180,.3);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-size: .9rem; color: var(--c);
+      box-shadow: 0 0 16px rgba(0,229,180,.13), inset 0 1px 0 rgba(0,229,180,.12);
     }
     .brand-name {
-      font-family: var(--brand); font-weight: 800; font-size: 1.3rem;
-      letter-spacing: 0.02em; color: #fff; line-height: 1;
+      font-family: var(--ui); font-weight: 700; font-size: 1.2rem;
+      letter-spacing: .14em; text-transform: uppercase; color: var(--text); line-height: 1;
     }
     .brand-sub {
-      font-family: var(--mono); font-size: 0.6rem; color: var(--teal);
-      letter-spacing: 0.16em; text-transform: uppercase; margin-top: 3px; opacity: 0.9;
+      font-family: var(--mono); font-size: .48rem; color: rgba(0,229,180,.5);
+      letter-spacing: .16em; text-transform: uppercase; margin-top: 3px;
     }
 
-    .topbar-divider { width: 1px; height: 28px; background: var(--border-dim); margin: 0 0.25rem; }
+    .topbar-sep { width: 1px; height: 22px; background: rgba(0,229,180,.09); margin: 0 .15rem; }
 
-    .topbar-chips { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; }
+    .topbar-chips { display: flex; align-items: center; gap: .38rem; margin-left: auto; }
     .chip {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      font-family: var(--mono); font-size: 0.72rem; color: var(--text-sub);
-      background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim);
-      border-radius: 6px; padding: 0.32rem 0.75rem; white-space: nowrap;
-      letter-spacing: 0.03em; transition: all 0.15s;
+      display: inline-flex; align-items: center; gap: .3rem;
+      font-family: var(--mono); font-size: .58rem; color: var(--text-sub);
+      background: rgba(0,229,180,.03); border: 1px solid var(--border2);
+      border-radius: 5px; padding: .24rem .65rem; white-space: nowrap; letter-spacing: .04em;
+      transition: all .15s;
     }
+    .chip i { font-size: .62rem; color: var(--c); }
     .chip:hover { border-color: var(--border); color: var(--text); }
-    .chip i { font-size: 0.72rem; color: var(--teal); }
 
     .live-pill {
-      display: inline-flex; align-items: center; gap: 0.4rem;
-      background: rgba(16, 185, 129, 0.07); border: 1px solid rgba(16, 185, 129, 0.22);
-      border-radius: 6px; padding: 0.32rem 0.85rem;
-      font-family: var(--mono); font-size: 0.72rem;
-      color: var(--emerald); font-weight: 600; letter-spacing: 0.1em;
+      display: inline-flex; align-items: center; gap: .38rem;
+      background: rgba(0,229,180,.06); border: 1px solid rgba(0,229,180,.22);
+      border-radius: 5px; padding: .24rem .78rem;
+      font-family: var(--mono); font-size: .58rem; color: var(--c); letter-spacing: .18em;
     }
-    .dot-pulse {
+    .live-dot {
       width: 6px; height: 6px; border-radius: 50%;
-      background: var(--emerald); flex-shrink: 0;
-      box-shadow: 0 0 10px var(--emerald);
-      animation: dot-anim 2s ease-in-out infinite;
+      background: var(--c); box-shadow: 0 0 9px var(--c);
+      animation: blink 2s ease-in-out infinite;
     }
-    @keyframes dot-anim { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.35;transform:scale(.65);} }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
 
     /* ── SIDEBAR ── */
     #sidebar {
-      background: rgba(5, 10, 22, 0.85);
+      background: rgba(2,5,16,.92);
       border-right: 1px solid var(--border);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      display: flex; flex-direction: column; padding: 1.25rem 0.85rem; gap: 0.15rem;
-      position: relative;
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      display: flex; flex-direction: column;
+      padding: .85rem .6rem; gap: .08rem;
+      position: relative; z-index: 5;
+      overflow: hidden;
     }
     #sidebar::after {
-      content: ''; position: absolute; top: 0; right: 0; width: 1px; bottom: 0;
-      background: linear-gradient(180deg, transparent, var(--teal) 40%, var(--indigo) 70%, transparent);
-      opacity: 0.2;
+      content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 1px;
+      background: linear-gradient(180deg, transparent, rgba(0,229,180,.28) 42%, rgba(0,120,255,.22) 68%, transparent);
+      opacity: .22;
     }
 
     .nav-section-label {
-      font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.1em;
-      text-transform: uppercase; color: var(--text-sub);
-      padding: 0.6rem 0.75rem 0.3rem; margin-top: 0.4rem;
+      font-family: var(--ui); font-size: .65rem; font-weight: 700; letter-spacing: .24em;
+      text-transform: uppercase; color: var(--text-dim);
+      padding: .55rem .75rem .25rem; margin-top: .28rem;
     }
     .nav-item {
-      display: flex; align-items: center; gap: 0.7rem;
-      padding: 0.65rem 0.85rem; border-radius: 8px;
-      font-size: 0.92rem; font-weight: 600; color: var(--text-sub);
-      cursor: pointer; border: 1px solid transparent; transition: all 0.2s; position: relative;
-      letter-spacing: 0.01em;
+      display: flex; align-items: center; gap: .55rem;
+      padding: .6rem .78rem; border-radius: 7px;
+      font-family: var(--ui); font-size: .9rem; font-weight: 600;
+      letter-spacing: .05em; color: var(--text-sub);
+      cursor: pointer; border: 1px solid transparent;
+      transition: all .18s; position: relative;
     }
-    .nav-item .nav-icon {
-      width: 28px; height: 28px; border-radius: 7px;
+    .nav-icon {
+      width: 26px; height: 26px; border-radius: 6px;
       display: flex; align-items: center; justify-content: center;
-      background: rgba(255,255,255,0.04); border: 1px solid var(--border-dim);
-      font-size: 0.85rem; flex-shrink: 0; transition: all 0.2s;
+      background: rgba(255,255,255,.03); border: 1px solid rgba(0,229,180,.06);
+      font-size: .78rem; flex-shrink: 0; transition: all .18s; color: var(--text-dim);
     }
-    .nav-item:hover { background: var(--teal-dim); color: var(--text); border-color: var(--border); }
-    .nav-item:hover .nav-icon { background: var(--teal-dim); border-color: var(--border); color: var(--teal); }
-    .nav-item.active { background: var(--teal-dim); color: var(--teal); border-color: var(--border); }
-    .nav-item.active .nav-icon { background: rgba(0,212,184,0.12); border-color: rgba(0,212,184,0.3); color: var(--teal); }
+    .nav-item:hover { background: var(--c-dim); color: var(--text); border-color: var(--border2); }
+    .nav-item:hover .nav-icon { background: var(--c-dim); border-color: var(--border); color: var(--c); }
+    .nav-item.active { background: var(--c-dim); color: var(--c); border-color: var(--border); }
+    .nav-item.active .nav-icon { background: rgba(0,229,180,.1); border-color: rgba(0,229,180,.3); color: var(--c); }
     .nav-item.active::before {
       content: '';
-      position: absolute; left: -0.85rem; top: 20%; bottom: 20%;
-      width: 3px; background: linear-gradient(180deg, var(--teal), var(--indigo));
-      border-radius: 0 3px 3px 0;
-      box-shadow: 0 0 12px var(--teal);
+      position: absolute; left: -.6rem; top: 18%; bottom: 18%;
+      width: 3px; background: var(--c); border-radius: 0 3px 3px 0;
+      box-shadow: 0 0 10px var(--c);
     }
 
     .sidebar-footer {
-      margin-top: auto; padding: 0.85rem 0.75rem;
-      border-top: 1px solid var(--border-dim);
+      margin-top: auto; padding: .7rem .55rem;
+      border-top: 1px solid rgba(0,229,180,.06);
     }
     .sidebar-footer-text {
-      font-family: var(--mono); font-size: 0.65rem;
-      color: var(--text-sub); letter-spacing: 0.06em; text-align: center;
+      font-family: var(--ui); font-size: .68rem; font-weight: 500;
+      color: var(--text-dim); letter-spacing: .06em; text-align: center;
     }
     .sidebar-version {
-      display: inline-flex; align-items: center; gap: 0.3rem;
-      background: rgba(0,212,184,0.06); border: 1px solid rgba(0,212,184,0.1);
-      border-radius: 4px; padding: 0.22rem 0.65rem; margin-top: 0.45rem;
-      font-family: var(--mono); font-size: 0.62rem; color: var(--teal); letter-spacing: 0.08em;
+      display: inline-flex; align-items: center; gap: .22rem;
+      background: rgba(0,229,180,.05); border: 1px solid rgba(0,229,180,.1);
+      border-radius: 4px; padding: .16rem .5rem; margin-top: .35rem;
+      font-family: var(--mono); font-size: .48rem; color: rgba(0,229,180,.6); letter-spacing: .06em;
     }
 
-    /* ── MOBILE TAB BAR ── */
+    /* ── MOBILE TABS ── */
     #mobile-tabs {
       display: none;
-      background: rgba(5,10,22,0.92);
+      background: rgba(2,5,16,.96);
       border-bottom: 1px solid var(--border);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
       position: relative; z-index: 9;
     }
     .mob-tabs-inner { display: flex; align-items: stretch; }
     .mob-tab {
       flex: 1; display: flex; flex-direction: column; align-items: center;
-      justify-content: center; gap: 0.2rem;
-      padding: 0.6rem 0.5rem;
-      font-family: var(--ui); font-size: 0.75rem; font-weight: 600;
-      color: var(--text-sub); cursor: pointer;
+      justify-content: center; gap: .15rem;
+      padding: .5rem .3rem;
+      font-family: var(--ui); font-size: .7rem; font-weight: 700;
+      color: var(--text-dim); cursor: pointer;
       border-bottom: 2px solid transparent;
-      transition: all 0.2s; letter-spacing: 0.01em;
+      transition: all .18s; letter-spacing: .08em; text-transform: uppercase;
     }
-    .mob-tab i { font-size: 1.1rem; }
-    .mob-tab:hover { color: var(--text); background: var(--teal-dim); }
-    .mob-tab.active { color: var(--teal); border-bottom-color: var(--teal); background: var(--teal-dim); }
+    .mob-tab i { font-size: .88rem; }
+    .mob-tab:hover { color: var(--text); background: var(--c-dim); }
+    .mob-tab.active { color: var(--c); border-bottom-color: var(--c); background: var(--c-dim); }
 
-    /* ── CONTENT ── */
-    #content { overflow-y: auto; padding: 1.5rem; background: transparent; }
-    #content::-webkit-scrollbar { width: 4px; }
-    #content::-webkit-scrollbar-thumb { background: rgba(0,212,184,0.15); border-radius: 4px; }
-    #content::-webkit-scrollbar-track { background: transparent; }
+    /* ── CONTENT AREA ── */
+    #content {
+      position: relative;
+      overflow: hidden;
+      /* height = 1fr from grid */
+    }
 
-    .tab-pane { display: none; animation: fade-up 0.25s ease; }
+    .tab-pane { display: none; animation: fadein .22s ease; }
     .tab-pane.active { display: block; }
-    @keyframes fade-up { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
+    @keyframes fadein { from{opacity:0;transform:translateY(6px);} to{opacity:1;transform:translateY(0);} }
+
+    /* Non-USV tabs: internal scroll */
+    #navigation.tab-pane.active,
+    #sensors.tab-pane.active,
+    #nanoplastic.tab-pane.active {
+      overflow-y: auto;
+      padding: 1.1rem;
+      height: 100%;
+    }
+    #navigation.tab-pane.active::-webkit-scrollbar,
+    #sensors.tab-pane.active::-webkit-scrollbar,
+    #nanoplastic.tab-pane.active::-webkit-scrollbar { width: 3px; }
+    #navigation.tab-pane.active::-webkit-scrollbar-thumb,
+    #sensors.tab-pane.active::-webkit-scrollbar-thumb,
+    #nanoplastic.tab-pane.active::-webkit-scrollbar-thumb { background: rgba(0,229,180,.14); border-radius: 4px; }
+
+    /* ── USV TAB: FULL MAP ── */
+    #usv.tab-pane {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+    #usv.tab-pane.active { display: block; }
+
+    #map {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Overlay container (pointer-events: none so map clicks pass through) */
+    .map-overlays {
+      position: absolute;
+      inset: 0;
+      z-index: 500;
+      pointer-events: none;
+    }
+
+    /* Each overlay widget restores pointer events */
+    .ov {
+      position: absolute;
+      pointer-events: auto;
+      max-height: calc(100% - 1.6rem);
+      overflow-y: auto;
+    }
+    .ov::-webkit-scrollbar { width: 2px; }
+    .ov::-webkit-scrollbar-thumb { background: rgba(0,229,180,.18); border-radius: 4px; }
+
+    .ov-tl { top: .75rem; left: .75rem; }
+    .ov-tr { top: .75rem; right: .75rem; width: 218px; }
+    .ov-bl { bottom: .75rem; left: .75rem; width: 228px; }
+    .ov-br { bottom: .75rem; right: .75rem; width: 218px; }
+
+    /* Map click hint */
+    .map-hint-chip {
+      position: absolute;
+      bottom: .75rem; left: 50%; transform: translateX(-50%);
+      z-index: 500; pointer-events: none;
+      font-family: var(--mono); font-size: .54rem; color: var(--text-dim); letter-spacing: .06em;
+      background: rgba(2,6,18,.78); border: 1px solid var(--border2);
+      border-radius: 20px; padding: .22rem .9rem;
+      display: flex; align-items: center; gap: .28rem;
+      backdrop-filter: blur(14px); white-space: nowrap;
+    }
+    .map-hint-chip i { color: var(--c); font-size: .58rem; }
 
     /* ── GLASS PANELS ── */
     .panel {
       background: var(--glass);
       border: 1px solid var(--border);
-      border-radius: 14px;
+      border-radius: 11px;
       overflow: hidden;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      box-shadow: 0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
-      transition: box-shadow 0.2s;
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      box-shadow: 0 8px 40px rgba(0,0,0,.55), inset 0 1px 0 rgba(0,229,180,.05);
     }
-    .panel:hover { box-shadow: 0 4px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,212,184,0.06), inset 0 1px 0 rgba(255,255,255,0.05); }
+
+    /* Overlay panel — stronger glass for map legibility */
+    .panel-ov {
+      background: var(--glass-ov);
+      border: 1px solid rgba(0,229,180,.15);
+      border-radius: 10px;
+      overflow: hidden;
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      box-shadow: 0 12px 48px rgba(0,0,0,.72), inset 0 1px 0 rgba(0,229,180,.07);
+    }
 
     .panel-head {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0.75rem 1.1rem; background: rgba(255,255,255,0.02);
-      border-bottom: 1px solid var(--border-dim); gap: 0.5rem; flex-wrap: wrap;
+      padding: .52rem .88rem; background: rgba(0,229,180,.025);
+      border-bottom: 1px solid var(--border2); gap: .42rem; flex-wrap: wrap;
     }
     .panel-title {
-      display: flex; align-items: center; gap: 0.55rem;
-      font-family: var(--ui); font-size: 0.82rem; font-weight: 700;
-      letter-spacing: 0.03em; text-transform: uppercase; color: var(--text);
+      display: flex; align-items: center; gap: .42rem;
+      font-family: var(--ui); font-size: .75rem; font-weight: 700;
+      letter-spacing: .15em; text-transform: uppercase; color: rgba(0,229,180,.65);
     }
-    .panel-title i { color: var(--teal); font-size: 0.9rem; }
-    .panel-title-dot {
-      width: 5px; height: 5px; border-radius: 50%;
-      background: var(--teal); box-shadow: 0 0 8px var(--teal); flex-shrink: 0;
+    .panel-title i { color: var(--c); font-size: .78rem; }
+    .panel-dot {
+      width: 4px; height: 4px; border-radius: 50%;
+      background: var(--c); box-shadow: 0 0 7px var(--c); flex-shrink: 0;
     }
-    .panel-body { padding: 1.1rem; }
+    .panel-body { padding: .85rem; }
 
     /* ── METRICS ── */
-    .metric-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 0.55rem; }
+    .metric-grid   { display: grid; grid-template-columns: repeat(2,1fr); gap: .38rem; }
+    .metric-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: .38rem; }
+    .metric-grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: .42rem; }
+
     .metric {
-      background: rgba(255,255,255,0.025);
-      border: 1px solid var(--border-dim);
-      border-radius: 9px; padding: 0.7rem 0.85rem;
-      transition: all 0.15s; position: relative; overflow: hidden;
+      background: rgba(0,229,180,.025);
+      border: 1px solid var(--border2);
+      border-radius: 7px; padding: .55rem .7rem;
+      transition: background .15s, border-color .15s;
+      position: relative; overflow: hidden;
     }
     .metric::before {
       content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(0,212,184,0.2), transparent);
+      background: linear-gradient(90deg, transparent, rgba(0,229,180,.12), transparent);
     }
-    .metric:hover { background: rgba(0,212,184,0.04); border-color: rgba(0,212,184,0.18); }
+    .metric:hover { background: rgba(0,229,180,.045); border-color: rgba(0,229,180,.15); }
     .metric.span2 { grid-column: 1 / -1; }
 
     .metric-lbl {
-      font-family: var(--ui); font-size: 0.72rem; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.05em;
-      color: var(--text-sub); margin-bottom: 0.35rem;
+      font-family: var(--ui); font-size: .68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .1em;
+      color: var(--text-dim); margin-bottom: .2rem;
     }
     .metric-val {
-      font-family: var(--mono); font-size: 1.2rem; font-weight: 600;
-      color: var(--text); line-height: 1.2;
+      font-family: var(--mono); font-size: 1rem;
+      color: var(--text); line-height: 1.2; font-weight: 500;
     }
-    .metric-val.sm { font-size: 0.97rem; font-weight: 600; }
+    .metric-val.sm { font-size: .78rem; }
+    .metric-val.hi { color: var(--c); }
+    .metric-val.warn { color: var(--amber); }
+    .metric-val.err { color: var(--red); }
 
     .section-label {
-      font-family: var(--ui); font-size: 0.72rem; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-      color: var(--text-sub); margin-bottom: 0.6rem;
-      display: flex; align-items: center; gap: 0.4rem;
+      font-family: var(--ui); font-size: .68rem; font-weight: 700;
+      letter-spacing: .2em; text-transform: uppercase;
+      color: rgba(0,229,180,.48); margin-bottom: .42rem;
+      display: flex; align-items: center; gap: .35rem;
     }
-    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border-dim); }
-
-    /* ── BEARING VISUAL ── */
-    .bearing-wrap {
-      background: rgba(255,255,255,0.025); border: 1px solid var(--border-dim);
-      border-radius: 9px; padding: 0.85rem;
-    }
-    .bearing-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; }
-    .bearing-lbl { font-size: 0.85rem; font-weight: 600; color: var(--text-sub); }
-    #bearingRel { font-family: var(--mono); font-size: 1.05rem; color: var(--amber); font-weight: 600; }
-    .bearing-track {
-      position: relative; height: 6px;
-      background: rgba(255,255,255,0.04); border-radius: 10px;
-      border: 1px solid var(--border-dim); overflow: visible;
-    }
-    .bearing-track-fill {
-      position: absolute; inset: 0; border-radius: 10px;
-      background: linear-gradient(90deg,
-        rgba(244,63,94,0.3) 0%,
-        rgba(255,255,255,0.05) 35%,
-        rgba(0,212,184,0.15) 50%,
-        rgba(255,255,255,0.05) 65%,
-        rgba(244,63,94,0.3) 100%
-      );
-    }
-    .bearing-cursor {
-      position: absolute; top: -8px;
-      width: 0; height: 0;
-      border-left: 5px solid transparent; border-right: 5px solid transparent;
-      border-bottom: 11px solid var(--amber); transform: translateX(-50%);
-      filter: drop-shadow(0 0 6px rgba(245,158,11,.8)); transition: left 0.35s cubic-bezier(.4,0,.2,1);
-    }
-    .bearing-labels {
-      display: flex; justify-content: space-between;
-      font-family: var(--mono); font-size: 0.68rem; font-weight: 500; color: var(--text-sub); margin-top: 0.5rem;
-    }
-    #bearingText { color: var(--teal); font-weight: 600; }
-
-    .prog-track { height: 3px; background: rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; margin-top: 0.35rem; }
-    #intensityFill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, var(--teal), var(--amber)); transition: width 0.4s cubic-bezier(.4,0,.2,1); }
-
-    /* ── MAP ── */
-    #map {
-      height: 360px; width: 100%;
-      filter: invert(0.92) hue-rotate(180deg) brightness(0.78) contrast(1.15) saturate(0.9);
-    }
-    .map-hint {
-      padding: 0.5rem 1.1rem; font-family: var(--ui); font-size: 0.75rem; font-weight: 500;
-      color: var(--text-sub); background: rgba(255,255,255,0.015); border-top: 1px solid var(--border-dim);
-      display: flex; align-items: center; gap: 0.35rem;
-    }
-    .map-hint i { color: var(--teal); }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: rgba(0,229,180,.07); }
 
     /* ── BUTTONS ── */
     .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
-      font-family: var(--ui); font-size: 0.82rem; font-weight: 700;
-      padding: 0.58rem 1.15rem; border-radius: 8px;
-      border: 1px solid var(--border-dim); background: rgba(255,255,255,0.04); color: var(--text-sub);
-      cursor: pointer; transition: all 0.18s; text-transform: uppercase;
-      letter-spacing: 0.05em; white-space: nowrap; position: relative; overflow: hidden;
+      display: inline-flex; align-items: center; justify-content: center; gap: .32rem;
+      font-family: var(--ui); font-size: .82rem; font-weight: 700;
+      padding: .48rem 1rem; border-radius: 6px;
+      border: 1px solid var(--border2); background: rgba(0,229,180,.03); color: var(--text-sub);
+      cursor: pointer; transition: all .15s; text-transform: uppercase;
+      letter-spacing: .1em; white-space: nowrap;
     }
-    .btn::before {
-      content: ''; position: absolute; inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 60%);
-      opacity: 0; transition: opacity 0.18s;
-    }
-    .btn:hover::before { opacity: 1; }
-    .btn:hover { background: rgba(255,255,255,0.07); color: var(--text); border-color: var(--border); transform: translateY(-1px); }
+    .btn:hover { background: rgba(0,229,180,.07); color: var(--text); border-color: var(--border); transform: translateY(-1px); }
     .btn:active { transform: translateY(0); }
 
     .btn-teal {
-      background: linear-gradient(135deg, rgba(0,212,184,0.18), rgba(0,212,184,0.08));
-      border-color: rgba(0,212,184,0.4); color: var(--teal);
-      box-shadow: 0 2px 16px rgba(0,212,184,0.1), inset 0 1px 0 rgba(0,212,184,0.1);
+      background: rgba(0,229,180,.09); border-color: rgba(0,229,180,.3); color: var(--c);
+      box-shadow: 0 2px 12px rgba(0,229,180,.08), inset 0 1px 0 rgba(0,229,180,.06);
     }
-    .btn-teal:hover { background: linear-gradient(135deg, rgba(0,212,184,0.28), rgba(0,212,184,0.15)); border-color: rgba(0,212,184,0.6); box-shadow: 0 4px 20px rgba(0,212,184,0.2); }
+    .btn-teal:hover { background: rgba(0,229,180,.15); border-color: rgba(0,229,180,.5); }
 
-    .btn-rose {
-      background: linear-gradient(135deg, rgba(244,63,94,0.12), rgba(244,63,94,0.06));
-      border-color: rgba(244,63,94,0.3); color: var(--rose);
-    }
-    .btn-rose:hover { background: linear-gradient(135deg, rgba(244,63,94,0.22), rgba(244,63,94,0.12)); border-color: rgba(244,63,94,0.5); }
+    .btn-rose { background: var(--red-dim); border-color: rgba(255,53,85,.25); color: var(--red); }
+    .btn-rose:hover { background: rgba(255,53,85,.13); border-color: rgba(255,53,85,.45); }
 
-    .btn-amber {
-      background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.06));
-      border-color: rgba(245,158,11,0.3); color: var(--amber);
-    }
-    .btn-amber:hover { background: linear-gradient(135deg, rgba(245,158,11,0.22), rgba(245,158,11,0.12)); border-color: rgba(245,158,11,0.5); }
+    .btn-amber { background: var(--amber-dim); border-color: rgba(255,182,39,.25); color: var(--amber); }
+    .btn-amber:hover { background: rgba(255,182,39,.13); border-color: rgba(255,182,39,.45); }
 
-    .btn-emerald {
-      background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.06));
-      border-color: rgba(16,185,129,0.3); color: var(--emerald);
-    }
-    .btn-emerald:hover { background: linear-gradient(135deg, rgba(16,185,129,0.22), rgba(16,185,129,0.12)); border-color: rgba(16,185,129,0.5); }
+    .btn-emerald { background: var(--green-dim); border-color: rgba(42,252,106,.25); color: var(--green); }
+    .btn-emerald:hover { background: rgba(42,252,106,.13); border-color: rgba(42,252,106,.45); }
 
-    .btn-sm { padding: 0.32rem 0.7rem; font-size: 0.62rem; border-radius: 6px; }
-    .btn:disabled { opacity: 0.3; pointer-events: none; }
+    .btn-sm { padding: .26rem .6rem; font-size: .68rem; border-radius: 5px; }
+    .btn:disabled { opacity: .3; pointer-events: none; }
 
     /* ── TOGGLE ── */
-    .toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle { position: relative; width: 38px; height: 20px; flex-shrink: 0; }
     .toggle input { opacity: 0; width: 0; height: 0; }
     .tgl-track {
       position: absolute; inset: 0;
-      background: rgba(255,255,255,0.07);
-      border-radius: 22px; cursor: pointer; transition: all 0.22s;
-      border: 1px solid var(--border-dim);
+      background: rgba(0,229,180,.04); border-radius: 20px;
+      cursor: pointer; transition: all .2s; border: 1px solid var(--border2);
     }
     .tgl-track::before {
-      content: ''; position: absolute; width: 16px; height: 16px;
-      left: 2px; top: 2px; background: var(--text-sub); border-radius: 50%;
-      transition: 0.22s cubic-bezier(.4,0,.2,1);
-      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      content: ''; position: absolute; width: 14px; height: 14px;
+      left: 2px; top: 2px; background: var(--text-dim); border-radius: 50%;
+      transition: .2s cubic-bezier(.4,0,.2,1);
     }
-    input:checked + .tgl-track { background: rgba(0,212,184,0.2); border-color: rgba(0,212,184,0.5); }
-    input:checked + .tgl-track::before { transform: translateX(18px); background: var(--teal); box-shadow: 0 0 8px rgba(0,212,184,0.5); }
+    input:checked + .tgl-track { background: rgba(0,229,180,.14); border-color: rgba(0,229,180,.4); }
+    input:checked + .tgl-track::before { transform: translateX(18px); background: var(--c); box-shadow: 0 0 8px rgba(0,229,180,.5); }
 
     /* ── RANGE ── */
     input[type=range] {
-      -webkit-appearance: none; width: 100%; height: 4px;
-      background: rgba(255,255,255,0.07); border-radius: 10px; outline: none;
+      -webkit-appearance: none; width: 100%; height: 3px;
+      background: rgba(0,229,180,.09); border-radius: 5px; outline: none;
     }
     input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none; width: 18px; height: 18px;
-      background: var(--teal); border-radius: 50%;
-      box-shadow: 0 0 12px rgba(0,212,184,0.5); cursor: pointer;
-      border: 2px solid rgba(0,212,184,0.4);
+      -webkit-appearance: none; width: 14px; height: 14px;
+      background: var(--c); border-radius: 50%;
+      box-shadow: 0 0 10px rgba(0,229,180,.5); cursor: pointer;
+      border: 1px solid rgba(0,229,180,.4);
     }
     input[type=range]::-moz-range-thumb {
-      width: 18px; height: 18px; background: var(--teal); border-radius: 50%;
-      box-shadow: 0 0 12px rgba(0,212,184,0.5); cursor: pointer; border: none;
+      width: 14px; height: 14px; background: var(--c); border-radius: 50%;
+      box-shadow: 0 0 10px rgba(0,229,180,.5); cursor: pointer; border: none;
     }
 
     /* ── BADGE ── */
     .badge {
-      font-family: var(--mono); font-size: 0.68rem; font-weight: 600;
-      padding: 0.18rem 0.55rem; border-radius: 5px; border: 1px solid;
-      display: inline-block; letter-spacing: 0.08em; text-transform: uppercase;
+      font-family: var(--ui); font-size: .65rem; font-weight: 700;
+      padding: .14rem .48rem; border-radius: 4px; border: 1px solid;
+      display: inline-block; letter-spacing: .1em; text-transform: uppercase;
     }
-    .badge-high   { color: var(--rose);    border-color: rgba(244,63,94,0.3);   background: rgba(244,63,94,0.08); }
-    .badge-medium { color: var(--amber);   border-color: rgba(245,158,11,0.3);  background: rgba(245,158,11,0.08); }
-    .badge-low    { color: var(--emerald); border-color: rgba(16,185,129,0.3);  background: rgba(16,185,129,0.08); }
+    .badge-high   { color: var(--red);   border-color: rgba(255,53,85,.3);   background: var(--red-dim); }
+    .badge-medium { color: var(--amber); border-color: rgba(255,182,39,.3);  background: var(--amber-dim); }
+    .badge-low    { color: var(--green); border-color: rgba(42,252,106,.3);  background: var(--green-dim); }
 
     /* ── TABLE ── */
     .data-table { width: 100%; border-collapse: collapse; }
-    .data-table thead tr { background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border-dim); }
+    .data-table thead tr { background: rgba(0,229,180,.025); border-bottom: 1px solid var(--border2); }
     .data-table th {
-      font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em;
-      text-transform: uppercase; color: var(--text-sub); padding: 0.65rem 1rem;
+      font-family: var(--ui); font-size: .68rem; font-weight: 700; letter-spacing: .14em;
+      text-transform: uppercase; color: rgba(0,229,180,.5); padding: .55rem .85rem;
       text-align: left; white-space: nowrap;
     }
     .data-table td {
-      font-family: var(--mono); font-size: 0.76rem; color: var(--text);
-      padding: 0.55rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.025);
+      font-family: var(--mono); font-size: .68rem; font-weight: 400; color: var(--text);
+      padding: .45rem .85rem; border-bottom: 1px solid rgba(0,229,180,.032);
     }
-    .data-table tbody tr { transition: background 0.12s; }
-    .data-table tbody tr:hover td { background: rgba(0,212,184,0.03); color: var(--text); }
+    .data-table tbody tr { transition: background .12s; }
+    .data-table tbody tr:hover td { background: rgba(0,229,180,.028); }
     .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
     /* ── STAT CARDS ── */
-    .stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 0.75rem; margin-bottom: 1.25rem; }
+    .stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: .6rem; margin-bottom: 1rem; }
     .stat-card {
-      background: var(--glass); border: 1px solid var(--border); border-radius: 12px;
-      padding: 1.1rem 1rem; text-align: center;
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      transition: all 0.2s; position: relative; overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      background: var(--glass); border: 1px solid var(--border); border-radius: 10px;
+      padding: .85rem .8rem; text-align: center;
+      backdrop-filter: blur(28px);
+      transition: all .2s; position: relative; overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,.35);
     }
     .stat-card::before {
       content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(0,212,184,0.3), transparent);
+      background: linear-gradient(90deg, transparent, rgba(0,229,180,.22), transparent);
     }
-    .stat-card:hover { transform: translateY(-2px); border-color: rgba(0,212,184,0.2); box-shadow: 0 8px 28px rgba(0,0,0,0.35); }
-    .stat-num { font-family: var(--brand); font-size: 2rem; font-weight: 700; color: #fff; line-height: 1.2; }
-    .stat-sub { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-sub); margin-bottom: 0.35rem; }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(0,229,180,.18); }
+    .stat-num { font-family: var(--mono); font-size: 1.7rem; font-weight: 700; color: var(--text); line-height: 1.2; }
+    .stat-sub { font-family: var(--ui); font-size: .65rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--text-dim); margin-bottom: .28rem; }
 
-    /* ── MISC COMPONENTS ── */
-    .divider { border: none; border-top: 1px solid var(--border-dim); margin: 0.8rem 0; }
-
-    .row-label {
-      font-size: 0.8rem; font-weight: 600; color: var(--text-sub);
-      display: flex; align-items: center; gap: 0.4rem;
-    }
-    .row-label i { color: var(--text-dim); font-size: 0.8rem; }
-    .row-val { font-family: var(--mono); font-size: 0.8rem; color: var(--teal); font-weight: 600; }
-
+    /* ── MISC ── */
+    .divider { border: none; border-top: 1px solid rgba(0,229,180,.06); margin: .52rem 0; }
+    .row-label { font-family: var(--ui); font-size: .8rem; font-weight: 600; color: var(--text-sub); display: flex; align-items: center; gap: .32rem; }
+    .row-label i { color: var(--text-dim); font-size: .72rem; }
+    .row-val { font-family: var(--mono); font-size: .72rem; font-weight: 500; color: var(--c); }
     .override-chip {
-      font-family: var(--mono); font-size: 0.6rem;
-      background: rgba(255,255,255,0.04); border: 1px solid var(--border-dim);
-      border-radius: 5px; padding: 0.22rem 0.65rem; color: var(--text-sub);
+      font-family: var(--mono); font-size: .54rem; font-weight: 500;
+      background: rgba(0,229,180,.03); border: 1px solid var(--border2);
+      border-radius: 4px; padding: .18rem .55rem; color: var(--text-dim); letter-spacing: .06em;
     }
-
     .sub-panel {
-      background: rgba(255,255,255,0.025); border: 1px solid var(--border-dim);
-      border-radius: 9px; padding: 0.9rem;
+      background: rgba(0,229,180,.02); border: 1px solid var(--border2);
+      border-radius: 7px; padding: .62rem;
     }
-
     .cap-status {
-      font-family: var(--mono); font-size: 0.62rem;
-      background: rgba(255,255,255,0.04); border: 1px solid var(--border-dim);
-      border-radius: 6px; padding: 0.32rem 0.8rem; color: var(--text-sub);
+      font-family: var(--ui); font-size: .72rem; font-weight: 600;
+      background: rgba(0,229,180,.03); border: 1px solid var(--border2);
+      border-radius: 5px; padding: .25rem .7rem; color: var(--text-sub); letter-spacing: .08em;
     }
 
     #noImageMessage {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 0.6rem; height: 180px; border: 1px dashed rgba(255,255,255,0.07);
-      border-radius: 10px; font-family: var(--mono); font-size: 0.68rem; color: var(--text-dim);
+      gap: .5rem; height: 180px; border: 1px dashed rgba(0,229,180,.1);
+      border-radius: 8px; font-family: var(--ui); font-size: .72rem; font-weight: 600;
+      color: var(--text-dim); letter-spacing: .08em;
     }
-    #noImageMessage i { font-size: 2rem; color: var(--text-dim); }
+    #noImageMessage i { font-size: 1.7rem; color: rgba(0,229,180,.18); }
 
     input[type=number] {
-      width: 100%; padding: 0.45rem 0.7rem;
-      background: rgba(255,255,255,0.04); border: 1px solid var(--border-dim);
-      border-radius: 7px; font-family: var(--mono); font-size: 0.8rem;
-      color: var(--text); outline: none; margin-top: 0.5rem; transition: border-color 0.15s;
+      width: 100%; padding: .38rem .6rem;
+      background: rgba(0,229,180,.03); border: 1px solid var(--border2);
+      border-radius: 6px; font-family: var(--mono); font-size: .7rem;
+      color: var(--text); outline: none; margin-top: .38rem; transition: border-color .15s;
     }
-    input[type=number]:focus { border-color: rgba(0,212,184,0.4); background: rgba(0,212,184,0.03); }
+    input[type=number]:focus { border-color: rgba(0,229,180,.36); background: rgba(0,229,180,.04); }
 
     .scroll-y { overflow-y: auto; }
     .scroll-y::-webkit-scrollbar { width: 3px; }
-    .scroll-y::-webkit-scrollbar-thumb { background: rgba(0,212,184,0.15); border-radius: 4px; }
+    .scroll-y::-webkit-scrollbar-thumb { background: rgba(0,229,180,.12); border-radius: 4px; }
 
-    /* ── LAYOUT HELPERS ── */
-    .usv-grid { display: grid; grid-template-columns: 320px 1fr; gap: 1.25rem; align-items: start; }
-    .usv-right { display: flex; flex-direction: column; gap: 1.25rem; }
-    .ctrl-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.1rem; }
-    .sensors-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
-    .nano-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: center; }
+    /* ── BEARING INDICATOR ── */
+    .bearing-wrap {
+      background: rgba(0,229,180,.02); border: 1px solid var(--border2);
+      border-radius: 7px; padding: .65rem;
+    }
+    .bearing-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: .42rem; }
+    .bearing-lbl { font-family: var(--ui); font-size: .75rem; font-weight: 600; color: var(--text-sub); letter-spacing: .05em; }
+    #bearingRel { font-family: var(--mono); font-size: .9rem; font-weight: 500; color: var(--amber); }
+    .bearing-track {
+      position: relative; height: 5px;
+      background: rgba(0,229,180,.04); border-radius: 5px;
+      border: 1px solid var(--border2); overflow: visible;
+    }
+    .bearing-track-fill {
+      position: absolute; inset: 0; border-radius: 5px;
+      background: linear-gradient(90deg,
+        rgba(255,53,85,.22) 0%, rgba(0,229,180,.04) 35%,
+        rgba(0,229,180,.12) 50%, rgba(0,229,180,.04) 65%,
+        rgba(255,53,85,.22) 100%
+      );
+    }
+    .bearing-cursor {
+      position: absolute; top: -7px;
+      width: 0; height: 0;
+      border-left: 5px solid transparent; border-right: 5px solid transparent;
+      border-bottom: 10px solid var(--amber); transform: translateX(-50%);
+      filter: drop-shadow(0 0 5px rgba(255,182,39,.75));
+      transition: left .35s cubic-bezier(.4,0,.2,1);
+    }
+    .bearing-labels {
+      display: flex; justify-content: space-between;
+      font-family: var(--ui); font-size: .62rem; font-weight: 600; color: var(--text-dim); margin-top: .38rem;
+      letter-spacing: .06em;
+    }
+    #bearingText { color: var(--amber); }
 
-    /* ── RISK INDICATOR ── */
+    /* ── COMPASS (Overlay) ── */
+    .compass-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: .5rem;
+      padding: .65rem;
+    }
+    .compass-label {
+      font-family: var(--ui); font-size: .65rem; font-weight: 700; letter-spacing: .18em;
+      text-transform: uppercase; color: rgba(0,229,180,.5);
+      align-self: flex-start;
+      display: flex; align-items: center; gap: .3rem;
+    }
+    .compass-label::before { content: '◆'; font-size: .4rem; color: var(--c); }
+    .heading-tape {
+      width: 100%; background: rgba(0,0,0,.45); border: 1px solid rgba(0,229,180,.09);
+      border-radius: 6px; padding: .45rem .7rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .tape-lbl {
+      font-family: var(--ui); font-size: .62rem; font-weight: 700;
+      letter-spacing: .12em; color: rgba(0,229,180,.45); text-transform: uppercase; margin-bottom: 2px;
+    }
+    .tape-val { font-family: var(--mono); font-size: 1.15rem; font-weight: 500; color: var(--c); letter-spacing: .04em; line-height: 1; }
+    .brng-tape {
+      width: 100%; background: rgba(0,0,0,.38); border: 1px solid rgba(0,229,180,.07);
+      border-radius: 6px; padding: .42rem .65rem;
+    }
+    .brng-track { height: 3px; background: rgba(0,229,180,.06); border-radius: 4px; position: relative; margin: .26rem 0 .4rem; }
+    .brng-row { display: flex; justify-content: space-between; align-items: center; }
+    .brng-lbl { font-family: var(--ui); font-size: .58rem; font-weight: 700; letter-spacing: .1em; color: rgba(0,229,180,.32); text-transform: uppercase; }
+    .brng-num { font-family: var(--mono); font-size: .78rem; font-weight: 500; color: var(--amber); }
+
+    /* Connectivity row */
+    .conn-row { display: grid; grid-template-columns: 1fr 1fr; gap: .38rem; width: 100%; }
+    .conn-cell {
+      background: rgba(0,229,180,.02); border: 1px solid var(--border2);
+      border-radius: 6px; padding: .42rem .58rem;
+    }
+    .conn-cell .metric-lbl { margin-bottom: .18rem; font-size: .6rem; }
+    .conn-cell .metric-val { font-size: .72rem; }
+
+    /* Node progress dots */
+    .node-dots { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+    .ndot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: rgba(0,229,180,.06); border: 1px solid rgba(0,229,180,.1);
+      transition: all .2s;
+    }
+    .ndot.done { background: rgba(42,252,106,.32); border-color: rgba(42,252,106,.55); }
+    .ndot.act  { background: var(--c); border-color: var(--c); box-shadow: 0 0 8px var(--c); }
+
+    /* Risk panel */
     .risk-panel {
-      border-radius: 9px; padding: 0.9rem;
-      background: rgba(99,102,241,0.05);
-      border-left: 2px solid rgba(99,102,241,0.5);
-      border-top: 1px solid rgba(99,102,241,0.1);
-      border-right: 1px solid rgba(99,102,241,0.05);
-      border-bottom: 1px solid rgba(99,102,241,0.05);
+      border-radius: 8px; padding: .75rem;
+      background: rgba(99,102,241,.04);
+      border-left: 2px solid rgba(99,102,241,.35);
+      border-top: 1px solid rgba(99,102,241,.08);
+      border-right: 1px solid rgba(99,102,241,.04);
+      border-bottom: 1px solid rgba(99,102,241,.04);
     }
 
-    /* ══════════════════════════
-       TABLET ≤ 1024px
-    ══════════════════════════ */
+    /* Sensors grid */
+    .sensors-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    /* Nano grid */
+    .nano-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+
+    /* ════════════════════════
+       RESPONSIVE
+    ════════════════════════ */
     @media (max-width: 1024px) {
-      :root { --sidebar-w: 190px; }
-      .ctrl-grid { grid-template-columns: 1fr 1fr; }
-      .ctrl-grid > *:last-child { grid-column: 1 / -1; }
+      :root { --sidebar-w: 192px; }
+      .metric-grid-4 { grid-template-columns: repeat(2,1fr); }
+      .ov-tr { width: 195px; }
+      .ov-bl { width: 205px; }
+      .ov-br { width: 195px; }
     }
 
-    /* ══════════════════════════
-       MOBILE ≤ 767px
-    ══════════════════════════ */
     @media (max-width: 767px) {
       body { overflow: auto; }
       #shell {
         grid-template-columns: 1fr;
         grid-template-rows: var(--topbar-h) var(--mobtab-h) 1fr;
-        height: auto; min-height: 100svh;
+        height: 100svh;
       }
-      #sidebar { display: none; }
+      #sidebar     { display: none; }
       #mobile-tabs { display: block; }
-      #content { overflow: visible; height: auto; padding: 0.9rem; }
-      #topbar { padding: 0 1rem; }
-      .brand-sub { display: none; }
+      #content     { height: calc(100svh - var(--topbar-h) - var(--mobtab-h)); overflow: hidden; }
+
+      #topbar     { padding: 0 .85rem; }
+      .brand-sub  { display: none; }
       .chip.hide-mob { display: none; }
-      .usv-grid { grid-template-columns: 1fr; }
-      .usv-grid > .panel { max-height: none !important; }
-      #map { height: 240px; }
-      .ctrl-grid { grid-template-columns: 1fr; }
-      .ctrl-grid > *:last-child { grid-column: auto; }
+
+      #navigation.tab-pane.active,
+      #sensors.tab-pane.active,
+      #nanoplastic.tab-pane.active { padding: .75rem; }
+
+      .ov-tl { top: .5rem; left: .5rem; }
+      .ov-tr { top: .5rem; right: .5rem; width: 175px; }
+      .ov-bl { bottom: .5rem; left: .5rem; width: 188px; }
+      .ov-br { bottom: .5rem; right: .5rem; width: 178px; }
+
       .sensors-grid { grid-template-columns: 1fr; }
-      .stat-row { grid-template-columns: repeat(2,1fr); gap: 0.55rem; }
-      .stat-num { font-size: 1.6rem; }
+      .metric-grid-3 { grid-template-columns: repeat(2,1fr); }
+      .metric-grid-4 { grid-template-columns: repeat(2,1fr); }
+      .stat-row { grid-template-columns: repeat(2,1fr); gap: .45rem; }
+      .stat-num { font-size: 1.4rem; }
       .nano-grid { grid-template-columns: 1fr; }
-      .btn { padding: 0.6rem 1rem; }
-      input[type=range]::-webkit-slider-thumb { width: 22px; height: 22px; }
     }
 
-    @media (max-width: 390px) {
-      .mob-tab { font-size: 0.6rem; padding: 0.5rem 0.4rem; }
-      .metric-val { font-size: 0.9rem; }
-      .brand-name { font-size: 1rem; }
+    @media (max-width: 420px) {
+      .ov-tr { width: 152px; }
+      .ov-bl { width: 165px; }
+      .ov-br { width: 158px; }
+      .metric-val { font-size: .88rem; }
     }
   </style>
 </head>
@@ -602,97 +694,335 @@
       <div class="brand-icon"><i class="bi bi-water"></i></div>
       <div>
         <div class="brand-name">AquaScan</div>
-        <div class="brand-sub">USV Command v2.0</div>
+        <div class="brand-sub">USV Command v2.1</div>
       </div>
     </div>
-    <div class="topbar-divider"></div>
+    <div class="topbar-sep"></div>
     <div class="topbar-chips">
       <span class="chip hide-mob"><i class="bi bi-reception-4"></i> <span id="loraStat">LoRa: ---</span></span>
       <span class="chip hide-mob"><i class="bi bi-satellite"></i> <span id="gpsStatus">GPS: ---</span></span>
       <span class="chip"><i class="bi bi-clock"></i> <span id="time">--:--:--</span></span>
-      <span class="live-pill"><span class="dot-pulse"></span>LIVE</span>
+      <span class="live-pill"><span class="live-dot"></span>LIVE</span>
     </div>
   </header>
 
   <!-- ── MOBILE TABS ── -->
   <div id="mobile-tabs">
     <div class="mob-tabs-inner">
-      <div class="mob-tab active" data-tab="usv" onclick="showTab('usv')">
-        <i class="bi bi-broadcast"></i><span>USV Control</span>
-      </div>
-      <div class="mob-tab" data-tab="sensors" onclick="showTab('sensors')">
-        <i class="bi bi-activity"></i><span>Sensors</span>
-      </div>
-      <div class="mob-tab" data-tab="nanoplastic" onclick="showTab('nanoplastic')">
-        <i class="bi bi-virus2"></i><span>Nanoplastic</span>
-      </div>
+      <div class="mob-tab active" data-tab="usv"         onclick="showTab('usv')">        <i class="bi bi-broadcast"></i><span>USV</span></div>
+      <div class="mob-tab"        data-tab="navigation"  onclick="showTab('navigation')"> <i class="bi bi-compass"></i><span>Nav</span></div>
+      <div class="mob-tab"        data-tab="sensors"     onclick="showTab('sensors')">    <i class="bi bi-activity"></i><span>Sensors</span></div>
+      <div class="mob-tab"        data-tab="nanoplastic" onclick="showTab('nanoplastic')"><i class="bi bi-virus2"></i><span>Nano</span></div>
     </div>
   </div>
 
   <!-- ── DESKTOP SIDEBAR ── -->
   <nav id="sidebar">
-    <div class="nav-section-label">Navigation</div>
-
-    <div class="nav-item active" data-tab="usv" onclick="showTab('usv')">
-      <div class="nav-icon"><i class="bi bi-broadcast"></i></div>
-      <span>USV Control</span>
+    <div class="nav-section-label">Panels</div>
+    <div class="nav-item active" data-tab="usv"         onclick="showTab('usv')">
+      <div class="nav-icon"><i class="bi bi-broadcast"></i></div><span>USV Control</span>
     </div>
-    <div class="nav-item" data-tab="sensors" onclick="showTab('sensors')">
-      <div class="nav-icon"><i class="bi bi-activity"></i></div>
-      <span>Sensors &amp; Logs</span>
+    <div class="nav-item"        data-tab="navigation"  onclick="showTab('navigation')">
+      <div class="nav-icon"><i class="bi bi-compass"></i></div><span>Navigation</span>
     </div>
-    <div class="nav-item" data-tab="nanoplastic" onclick="showTab('nanoplastic')">
-      <div class="nav-icon"><i class="bi bi-virus2"></i></div>
-      <span>Nanoplastic</span>
+    <div class="nav-item"        data-tab="sensors"     onclick="showTab('sensors')">
+      <div class="nav-icon"><i class="bi bi-activity"></i></div><span>Sensors &amp; Logs</span>
     </div>
-
+    <div class="nav-item"        data-tab="nanoplastic" onclick="showTab('nanoplastic')">
+      <div class="nav-icon"><i class="bi bi-virus2"></i></div><span>Nanoplastic</span>
+    </div>
     <div class="sidebar-footer">
       <div class="sidebar-footer-text">AquaScan &copy; 2025</div>
       <div style="display:flex;justify-content:center;">
-        <div class="sidebar-version"><i class="bi bi-hexagon-fill" style="font-size:0.45rem;"></i> v2.0.0 STABLE</div>
+        <div class="sidebar-version"><i class="bi bi-hexagon-fill" style="font-size:.38rem;"></i>&nbsp;v2.1.0 STABLE</div>
       </div>
     </div>
   </nav>
 
-  <!-- ── MAIN CONTENT ── -->
+  <!-- ══════════════════════════════════════
+       MAIN CONTENT
+  ══════════════════════════════════════ -->
   <main id="content">
 
-    <!-- TAB 1 · USV CONTROL -->
+    <!-- ─────────────────────────────────
+         TAB 1 · USV CONTROL
+         Full-screen map + overlay widgets
+    ───────────────────────────────── -->
     <div id="usv" class="tab-pane active">
-      <div class="usv-grid">
 
-        <!-- Telemetry Panel -->
-        <div class="panel scroll-y" style="max-height:calc(100vh - 96px);">
-          <div class="panel-head">
-            <div class="panel-title">
-              <div class="panel-title-dot"></div>
-              <i class="bi bi-speedometer2"></i>
-              Live Telemetry
+      <!-- Leaflet map fills everything -->
+      <div id="map"></div>
+
+      <!-- Overlays container (pointer-events:none so map clicks still work) -->
+      <div class="map-overlays">
+
+        <!-- TOP-LEFT: Map controls -->
+        <div class="ov ov-tl">
+          <div class="panel-ov" style="display:flex;align-items:center;gap:.32rem;padding:.45rem .62rem;flex-wrap:wrap;">
+            <span class="panel-title" style="margin-right:.18rem;"><div class="panel-dot"></div><i class="bi bi-map"></i>Track View</span>
+            <button class="btn btn-teal btn-sm" onclick="centerAndZoom()"><i class="bi bi-crosshair"></i> Center</button>
+            <button class="btn btn-sm" style="padding:.26rem .55rem;font-size:.65rem;" onclick="zoomToFit()">Fit</button>
+            <button class="btn btn-sm" style="padding:.26rem .55rem;font-size:.65rem;" id="autoZoomBtn" onclick="toggleAutoZoom()">Auto</button>
+          </div>
+        </div>
+
+        <!-- TOP-RIGHT: Compass + Orientation -->
+        <div class="ov ov-tr">
+          <div class="panel-ov">
+            <div class="panel-head" style="padding:.45rem .72rem;">
+              <div class="panel-title"><div class="panel-dot"></div><i class="bi bi-compass"></i>Compass</div>
+            </div>
+            <div class="compass-wrap">
+              <div class="compass-label">Heading / Bearing</div>
+
+              <!-- SVG Compass Rose -->
+              <svg width="172" height="172" viewBox="0 0 160 160" id="compassSVG" style="flex-shrink:0;">
+                <circle cx="80" cy="80" r="74" fill="none" stroke="rgba(0,229,180,.12)" stroke-width="1"/>
+                <circle cx="80" cy="80" r="68" fill="none" stroke="rgba(0,229,180,.05)" stroke-width="8"/>
+                <g stroke="rgba(0,229,180,.28)" stroke-width="1">
+                  <line x1="80" y1="8" x2="80" y2="22" transform="rotate(0   80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="22" transform="rotate(30  80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="22" transform="rotate(60  80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="22" transform="rotate(90  80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="22" transform="rotate(120 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="22" transform="rotate(150 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="22" transform="rotate(180 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="22" transform="rotate(210 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="22" transform="rotate(240 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="22" transform="rotate(270 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="22" transform="rotate(300 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="22" transform="rotate(330 80 80)"/>
+                </g>
+                <g stroke="rgba(0,229,180,.1)" stroke-width=".8">
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(10  80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(20  80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(40  80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(50  80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(70  80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(80  80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(100 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(110 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(130 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(140 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(160 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(170 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(190 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(200 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(220 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(230 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(250 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(260 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(280 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(290 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(310 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(320 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(340 80 80)"/>
+                  <line x1="80" y1="8" x2="80" y2="15" transform="rotate(350 80 80)"/>
+                </g>
+                <text x="80"  y="32"  text-anchor="middle" fill="#00E5B4"             font-family="JetBrains Mono" font-size="11" font-weight="700" letter-spacing="1">N</text>
+                <text x="128" y="84"  text-anchor="middle" fill="rgba(0,229,180,.42)" font-family="JetBrains Mono" font-size="9">E</text>
+                <text x="80"  y="134" text-anchor="middle" fill="rgba(0,229,180,.42)" font-family="JetBrains Mono" font-size="9">S</text>
+                <text x="32"  y="84"  text-anchor="middle" fill="rgba(0,229,180,.42)" font-family="JetBrains Mono" font-size="9">W</text>
+                <circle cx="80" cy="80" r="52" fill="rgba(0,0,0,.65)"/>
+                <g id="compassTarget">
+                  <line x1="80" y1="26" x2="80" y2="37" stroke="#FFB627" stroke-width="2.5" stroke-linecap="round"/>
+                </g>
+                <g id="compassNeedle">
+                  <polygon points="80,22 74.5,70 80,66 85.5,70" fill="#00E5B4" opacity=".92"/>
+                  <polygon points="80,138 74.5,90 80,94 85.5,90" fill="rgba(0,229,180,.18)"/>
+                </g>
+                <circle cx="80" cy="80" r="5" fill="#00E5B4" opacity=".88"/>
+                <circle cx="80" cy="80" r="2.5" fill="#02060E"/>
+              </svg>
+
+              <!-- Heading + Target tape -->
+              <div class="heading-tape">
+                <div><div class="tape-lbl">Heading</div><div id="head" class="tape-val">---</div></div>
+                <div style="text-align:right;"><div class="tape-lbl">Target</div><div id="tbrng" class="tape-val" style="color:var(--amber);">---</div></div>
+              </div>
+
+              <!-- Relative bearing mini-tape -->
+              <div class="brng-tape">
+                <div class="brng-row">
+                  <span class="brng-lbl">Rel. Bearing</span>
+                  <span class="brng-num" id="brngNum2">---</span>
+                </div>
+                <div class="brng-track">
+                  <div id="brngCursor2" style="position:absolute;top:-6px;left:50%;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:9px solid var(--amber);transform:translateX(-50%);filter:drop-shadow(0 0 4px rgba(255,182,39,.7));transition:left .35s;"></div>
+                </div>
+                <div class="brng-row" style="margin-top:.3rem;">
+                  <span class="brng-lbl">← PORT</span>
+                  <span class="brng-lbl" style="color:var(--amber);">STBD →</span>
+                </div>
+              </div>
+
+              <!-- LoRa / GPS connection status -->
+              <div class="conn-row">
+                <div class="conn-cell">
+                  <div class="metric-lbl">LoRa</div>
+                  <div id="loraStatMob" class="metric-val sm">---</div>
+                </div>
+                <div class="conn-cell">
+                  <div class="metric-lbl">GPS</div>
+                  <div id="gpsStatMob" class="metric-val sm">---</div>
+                </div>
+              </div>
+
+            </div><!-- /compass-wrap -->
+          </div><!-- /panel-ov -->
+        </div><!-- /ov-tr -->
+
+        <!-- BOTTOM-LEFT: Mission + Actuators -->
+        <div class="ov ov-bl">
+          <div class="panel-ov">
+            <div class="panel-head" style="padding:.45rem .72rem;">
+              <div class="panel-title"><div class="panel-dot"></div><i class="bi bi-joystick"></i>Controls</div>
+            </div>
+            <div class="panel-body" style="display:flex;flex-direction:column;gap:.65rem;">
+
+              <!-- Mission buttons -->
+              <div>
+                <div class="section-label">Mission</div>
+                <div style="display:flex;flex-direction:column;gap:.36rem;">
+                  <button class="btn btn-teal"  style="width:100%;" onclick="fetch('/start')"><i class="bi bi-play-fill"></i> Start Mission</button>
+                  <button class="btn btn-rose"  style="width:100%;" onclick="stopReset()"><i class="bi bi-stop-circle"></i> Stop / Reset</button>
+                  <button class="btn btn-amber" style="width:100%;" onclick="startCalibration()"><i class="bi bi-gear-wide-connected"></i> Calibrate</button>
+                </div>
+              </div>
+
+              <!-- Servo -->
+              <div class="sub-panel">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <div class="row-label"><i class="bi bi-motherboard"></i> Servo</div>
+                  <label class="toggle"><input type="checkbox" id="servoToggle" onchange="onServoToggle(this.checked)"><span class="tgl-track"></span></label>
+                </div>
+                <div id="servoState" style="font-family:var(--mono);font-size:.52rem;color:var(--text-dim);margin-top:.25rem;letter-spacing:.05em;font-weight:400;">OFF</div>
+              </div>
+
+              <!-- Pump -->
+              <div class="sub-panel">
+                <div class="row-label" style="margin-bottom:.32rem;"><i class="bi bi-droplet-fill"></i> Pump</div>
+                <input type="number" id="pumpRot" min="1" max="20" value="1">
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.25rem;margin-top:.38rem;">
+                  <button class="btn btn-emerald btn-sm" onclick="pumpForward()">FWD</button>
+                  <button class="btn btn-amber  btn-sm" onclick="pumpReverse()">REV</button>
+                  <button class="btn btn-rose   btn-sm" onclick="pumpStop()">STP</button>
+                </div>
+              </div>
+
             </div>
           </div>
-          <div class="panel-body" style="display:flex;flex-direction:column;gap:1.1rem;">
+        </div><!-- /ov-bl -->
+
+        <!-- BOTTOM-RIGHT: Throttle -->
+        <div class="ov ov-br">
+          <div class="panel-ov">
+            <div class="panel-head" style="padding:.45rem .72rem;">
+              <div class="panel-title"><div class="panel-dot"></div><i class="bi bi-speedometer2"></i>Throttle</div>
+            </div>
+            <div class="panel-body" style="display:flex;flex-direction:column;gap:.55rem;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div class="row-label"><i class="bi bi-link-45deg"></i> Sync</div>
+                <label class="toggle"><input type="checkbox" id="syncEnabled" onchange="onSyncToggle(this.checked)"><span class="tgl-track"></span></label>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:.26rem;">
+                  <span class="row-label">Left</span><span id="thrLeftVal" class="row-val">1000 µs</span>
+                </div>
+                <input type="range" min="1000" max="2000" value="1000" id="leftThrottle" oninput="updateLeftThrottle(this.value)">
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:.26rem;">
+                  <span class="row-label">Right</span><span id="thrRightVal" class="row-val">1000 µs</span>
+                </div>
+                <input type="range" min="1000" max="2000" value="1000" id="rightThrottle" oninput="updateRightThrottle(this.value)">
+              </div>
+              <hr class="divider">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="row-label" style="font-size:.68rem;">Override</span>
+                <span id="manualOverrideVal" class="override-chip">OFF</span>
+              </div>
+            </div>
+          </div>
+        </div><!-- /ov-br -->
+
+        <!-- Bottom center: map click hint -->
+        <div class="map-hint-chip">
+          <i class="bi bi-plus-circle"></i> Click map to add waypoint
+        </div>
+
+      </div><!-- /map-overlays -->
+    </div><!-- /usv tab -->
+
+
+    <!-- ─────────────────────────────────
+         TAB 2 · NAVIGATION
+         Full-width metrics (no compass here)
+    ───────────────────────────────── -->
+    <div id="navigation" class="tab-pane">
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+
+        <!-- Navigation Data -->
+        <div class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><div class="panel-dot"></div><i class="bi bi-speedometer2"></i>Navigation Data</div>
+          </div>
+          <div class="panel-body" style="display:flex;flex-direction:column;gap:.85rem;">
 
             <div>
-              <div class="section-label">Navigation</div>
-              <div class="metric-grid">
-                <div class="metric"><div class="metric-lbl">Compass Heading</div><div id="head" class="metric-val">---</div></div>
-                <div class="metric"><div class="metric-lbl">Target Bearing</div><div id="tbrng" class="metric-val">---</div></div>
-                <div class="metric"><div class="metric-lbl">Relative Bearing</div><div id="relBearing" class="metric-val">---</div></div>
-                <div class="metric"><div class="metric-lbl">Steering Error</div><div id="err" class="metric-val">---</div></div>
-                <div class="metric"><div class="metric-lbl">Direction</div><div id="direction" class="metric-val">---</div></div>
+              <div class="section-label">Heading &amp; Position</div>
+              <div class="metric-grid-4">
+                <div class="metric">
+                  <div class="metric-lbl">Compass Heading</div>
+                  <div id="head2" class="metric-val hi">---</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-lbl">Target Bearing</div>
+                  <div id="tbrng2" class="metric-val warn">---</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-lbl">Relative Bearing</div>
+                  <div id="relBearing2" class="metric-val">---</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-lbl">Steering Error</div>
+                  <div id="err2" class="metric-val">---</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-lbl">Direction</div>
+                  <div id="direction2" class="metric-val">---</div>
+                </div>
                 <div class="metric">
                   <div class="metric-lbl">Turn Intensity</div>
-                  <div id="intensity" class="metric-val">---</div>
-                  <div class="prog-track"><div id="intensityFill" style="width:0%"></div></div>
+                  <div id="intensity2" class="metric-val">---</div>
+                  <div style="height:3px;background:rgba(0,229,180,.05);border-radius:5px;overflow:hidden;margin-top:.26rem;">
+                    <div id="intensityFill2" style="height:100%;border-radius:5px;background:linear-gradient(90deg,var(--c),var(--amber));transition:width .4s;width:0%;"></div>
+                  </div>
                 </div>
-                <div class="metric"><div class="metric-lbl">Cross-track Err</div><div id="xte" class="metric-val">---</div></div>
-                <div class="metric"><div class="metric-lbl">Dist to Node</div><div id="dist" class="metric-val">---</div></div>
-                <div class="metric"><div class="metric-lbl">Latitude</div><div id="lat" class="metric-val sm">---</div></div>
-                <div class="metric"><div class="metric-lbl">Longitude</div><div id="lon" class="metric-val sm">---</div></div>
-                <div class="metric span2"><div class="metric-lbl">Active Node</div><div id="wp" class="metric-val">---</div></div>
+                <div class="metric">
+                  <div class="metric-lbl">Cross-track Err</div>
+                  <div id="xte2" class="metric-val">---</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-lbl">Dist to Node</div>
+                  <div id="dist2" class="metric-val">---</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-lbl">Latitude</div>
+                  <div id="lat2" class="metric-val sm hi">---</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-lbl">Longitude</div>
+                  <div id="lon2" class="metric-val sm hi">---</div>
+                </div>
+                <div class="metric span2" style="grid-column: span 2;">
+                  <div class="metric-lbl">Active Node</div>
+                  <div id="wp2" class="metric-val">---</div>
+                </div>
               </div>
             </div>
 
+            <!-- Bearing Indicator -->
             <div>
               <div class="section-label">Bearing Indicator</div>
               <div class="bearing-wrap">
@@ -709,155 +1039,61 @@
               </div>
             </div>
 
-            <!-- Mobile status -->
-            <div class="metric-grid" id="mob-status">
-              <div class="metric"><div class="metric-lbl">LoRa</div><div id="loraStatMob" class="metric-val sm">---</div></div>
-              <div class="metric"><div class="metric-lbl">GPS</div><div id="gpsStatMob" class="metric-val sm">---</div></div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- Right column: Map + Controls -->
-        <div class="usv-right">
-
-          <div class="panel">
-            <div class="panel-head">
-              <div class="panel-title">
-                <div class="panel-title-dot"></div>
-                <i class="bi bi-map"></i>Track View
-              </div>
-              <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-                <button class="btn btn-teal btn-sm" onclick="centerAndZoom()">
-                  <i class="bi bi-crosshair"></i> Center
-                </button>
-                <button class="btn btn-sm" onclick="zoomToFit()">Fit</button>
-                <button class="btn btn-sm" id="autoZoomBtn" onclick="toggleAutoZoom()">Auto</button>
-              </div>
-            </div>
-            <div id="map"></div>
-            <div class="map-hint"><i class="bi bi-plus-circle"></i> Click map to add waypoint</div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-head">
-              <div class="panel-title">
-                <div class="panel-title-dot"></div>
-                <i class="bi bi-joystick"></i>Control Center
-              </div>
-            </div>
-            <div class="panel-body">
-              <div class="ctrl-grid">
-
-                <!-- Mission -->
-                <div>
-                  <div class="section-label">Mission</div>
-                  <div style="display:flex;flex-direction:column;gap:0.5rem;">
-                    <button class="btn btn-teal" onclick="fetch('/start')">
-                      <i class="bi bi-play-fill"></i> Start Mission
-                    </button>
-                    <button class="btn btn-rose" onclick="stopReset()">
-                      <i class="bi bi-stop-circle"></i> Stop / Reset
-                    </button>
-                    <button class="btn btn-amber" onclick="startCalibration()">
-                      <i class="bi bi-gear-wide-connected"></i> Calibrate
-                    </button>
-                  </div>
+            <!-- Node Progress -->
+            <div>
+              <div class="section-label">Node Progress</div>
+              <div class="sub-panel">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.42rem;">
+                  <span class="row-label"><i class="bi bi-geo-alt"></i> Waypoint Progress</span>
+                  <span id="wpProgress" class="row-val">---</span>
                 </div>
-
-                <!-- Actuators -->
-                <div>
-                  <div class="section-label">Actuators</div>
-                  <div style="display:flex;flex-direction:column;gap:0.55rem;">
-                    <div class="sub-panel">
-                      <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <div class="row-label"><i class="bi bi-motherboard"></i> Servo</div>
-                        <label class="toggle"><input type="checkbox" id="servoToggle" onchange="onServoToggle(this.checked)"><span class="tgl-track"></span></label>
-                      </div>
-                      <div id="servoState" style="font-family:var(--mono);font-size:0.58rem;color:var(--text-dim);margin-top:0.35rem;letter-spacing:0.06em;">OFF</div>
-                    </div>
-                    <div class="sub-panel">
-                      <div class="row-label" style="margin-bottom:0.4rem;"><i class="bi bi-droplet-fill"></i> Pump</div>
-                      <input type="number" id="pumpRot" min="1" max="20" value="1">
-                      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.35rem;margin-top:0.5rem;">
-                        <button class="btn btn-emerald btn-sm" onclick="pumpForward()">FWD</button>
-                        <button class="btn btn-amber btn-sm" onclick="pumpReverse()">REV</button>
-                        <button class="btn btn-rose btn-sm" onclick="pumpStop()">STOP</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Throttle -->
-                <div>
-                  <div class="section-label">Throttle</div>
-                  <div class="sub-panel">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.85rem;">
-                      <div class="row-label"><i class="bi bi-link-45deg"></i> Sync</div>
-                      <label class="toggle"><input type="checkbox" id="syncEnabled" onchange="onSyncToggle(this.checked)"><span class="tgl-track"></span></label>
-                    </div>
-                    <div style="margin-bottom:0.75rem;">
-                      <div style="display:flex;justify-content:space-between;margin-bottom:0.35rem;">
-                        <span class="row-label">Left</span><span id="thrLeftVal" class="row-val">1000 µs</span>
-                      </div>
-                      <input type="range" min="1000" max="2000" value="1000" id="leftThrottle" oninput="updateLeftThrottle(this.value)">
-                    </div>
-                    <div>
-                      <div style="display:flex;justify-content:space-between;margin-bottom:0.35rem;">
-                        <span class="row-label">Right</span><span id="thrRightVal" class="row-val">1000 µs</span>
-                      </div>
-                      <input type="range" min="1000" max="2000" value="1000" id="rightThrottle" oninput="updateRightThrottle(this.value)">
-                    </div>
-                    <hr class="divider">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                      <span class="row-label" style="font-size:0.68rem;">Override</span>
-                      <span id="manualOverrideVal" class="override-chip">OFF</span>
-                    </div>
-                  </div>
-                </div>
-
+                <div id="nodeDots" class="node-dots"></div>
               </div>
             </div>
-          </div>
 
-        </div>
+          </div><!-- /panel-body -->
+        </div><!-- /nav data panel -->
+
       </div>
-    </div>
+    </div><!-- /navigation tab -->
 
-    <!-- TAB 2 · SENSORS & LOGS -->
+
+    <!-- ─────────────────────────────────
+         TAB 3 · SENSORS & LOGS
+    ───────────────────────────────── -->
     <div id="sensors" class="tab-pane">
       <div class="sensors-grid">
 
         <div class="panel">
           <div class="panel-head">
-            <div class="panel-title">
-              <div class="panel-title-dot"></div>
-              <i class="bi bi-droplet-half"></i>Water Quality &amp; Heavy Metals
-            </div>
+            <div class="panel-title"><div class="panel-dot"></div><i class="bi bi-droplet-half"></i>Water Quality &amp; Heavy Metals</div>
           </div>
-          <div class="panel-body">
-            <div class="metric-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:0.85rem;">
-              <div class="metric"><div class="metric-lbl">Temperature</div><div id="waterTemp" class="metric-val sm">---</div></div>
-              <div class="metric"><div class="metric-lbl">pH Level</div><div id="waterPH" class="metric-val sm">---</div></div>
-              <div class="metric"><div class="metric-lbl">TDS (ppm)</div><div id="waterTDS" class="metric-val sm">---</div></div>
+          <div class="panel-body" style="display:flex;flex-direction:column;gap:.85rem;">
+            <div>
+              <div class="section-label">Live Readings</div>
+              <div class="metric-grid-3">
+                <div class="metric"><div class="metric-lbl">Temperature</div><div id="waterTemp" class="metric-val sm">---</div></div>
+                <div class="metric"><div class="metric-lbl">pH Level</div><div id="waterPH" class="metric-val sm hi">---</div></div>
+                <div class="metric"><div class="metric-lbl">TDS (ppm)</div><div id="waterTDS" class="metric-val sm warn">---</div></div>
+              </div>
             </div>
-            <div class="risk-panel">
-              <div class="metric-lbl" style="margin-bottom:0.4rem;">Heavy Metal Risk Assessment</div>
-              <div id="hmRiskLevel" class="metric-val" style="font-size:1.1rem;margin-bottom:0.25rem;">---</div>
-              <div id="hmRiskScore" style="font-family:var(--mono);font-size:0.6rem;color:var(--text-sub);margin-bottom:0.4rem;">Score: ---</div>
-              <div id="hmRiskReasons" style="font-size:0.67rem;color:var(--text-dim);line-height:1.6;">---</div>
+            <div>
+              <div class="section-label">Risk Assessment</div>
+              <div class="risk-panel">
+                <div class="metric-lbl" style="color:rgba(99,102,241,.65);margin-bottom:.28rem;">Heavy Metal Risk</div>
+                <div id="hmRiskLevel" class="metric-val" style="font-size:1.05rem;margin-bottom:.2rem;">---</div>
+                <div id="hmRiskScore" style="font-family:var(--mono);font-size:.54rem;color:var(--text-sub);margin-bottom:.28rem;">Score: ---</div>
+                <div id="hmRiskReasons" style="font-family:var(--ui);font-size:.7rem;font-weight:500;color:var(--text-dim);line-height:1.65;">---</div>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="panel">
           <div class="panel-head">
-            <div class="panel-title">
-              <div class="panel-title-dot"></div>
-              <i class="bi bi-table"></i>Heavy Metal Log
-            </div>
+            <div class="panel-title"><div class="panel-dot"></div><i class="bi bi-table"></i>Heavy Metal Log</div>
           </div>
-          <div class="table-wrap scroll-y" style="max-height:360px;">
+          <div class="table-wrap scroll-y" style="max-height:420px;">
             <table class="data-table">
               <thead><tr><th>Date</th><th>Time</th><th>TDS</th><th>pH</th><th>Temp</th><th>Risk</th></tr></thead>
               <tbody id="hmLogBody"><tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-dim);">Loading…</td></tr></tbody>
@@ -866,70 +1102,58 @@
         </div>
 
       </div>
-    </div>
+    </div><!-- /sensors tab -->
 
-    <!-- TAB 3 · NANOPLASTIC -->
+
+    <!-- ─────────────────────────────────
+         TAB 4 · NANOPLASTIC
+    ───────────────────────────────── -->
     <div id="nanoplastic" class="tab-pane">
 
-      <div style="display:flex;align-items:center;gap:0.85rem;margin-bottom:1.25rem;flex-wrap:wrap;">
-        <button id="captureBtn" class="btn btn-teal" style="font-size:0.76rem;padding:0.6rem 1.5rem;">
+      <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.9rem;flex-wrap:wrap;">
+        <button id="captureBtn" class="btn btn-teal" style="font-size:.78rem;padding:.5rem 1.3rem;">
           <i class="bi bi-camera-fill"></i> Capture &amp; Analyze
         </button>
         <span id="captureStatus" class="cap-status">Ready</span>
       </div>
 
       <div class="stat-row">
-        <div class="stat-card">
-          <div class="stat-sub">Total Samples</div>
-          <div id="totalSamples" class="stat-num">0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-sub">Avg Particles</div>
-          <div id="avgParticles" class="stat-num">0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-sub">High Risk</div>
-          <div id="highRiskCount" class="stat-num" style="color:var(--rose);">0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-sub">Max Particles</div>
-          <div id="maxParticles" class="stat-num">0</div>
-        </div>
+        <div class="stat-card"><div class="stat-sub">Total Samples</div><div id="totalSamples" class="stat-num">0</div></div>
+        <div class="stat-card"><div class="stat-sub">Avg Particles</div><div id="avgParticles" class="stat-num">0</div></div>
+        <div class="stat-card"><div class="stat-sub">High Risk</div><div id="highRiskCount" class="stat-num" style="color:var(--red);">0</div></div>
+        <div class="stat-card"><div class="stat-sub">Max Particles</div><div id="maxParticles" class="stat-num">0</div></div>
       </div>
 
-      <div class="panel" style="margin-bottom:1.25rem;">
+      <div class="panel" style="margin-bottom:.95rem;">
         <div class="panel-head">
-          <div class="panel-title">
-            <div class="panel-title-dot"></div>
-            <i class="bi bi-image"></i>Latest Analysis
-          </div>
+          <div class="panel-title"><div class="panel-dot"></div><i class="bi bi-image"></i>Latest Analysis</div>
         </div>
         <div class="panel-body">
           <div class="nano-grid">
             <div>
-              <img id="latestImage" src="" style="display:none;width:100%;max-height:220px;object-fit:contain;border-radius:9px;border:1px solid var(--border-dim);">
+              <img id="latestImage" src="" style="display:none;width:100%;max-height:220px;object-fit:contain;border-radius:8px;border:1px solid var(--border2);">
               <div id="noImageMessage"><i class="bi bi-camera"></i>Awaiting capture…</div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:0;">
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--border-dim);">
-                <span style="font-size:0.71rem;font-weight:500;color:var(--text-sub);">Particles</span>
-                <span id="particleCount" style="font-family:var(--mono);font-size:0.78rem;color:var(--text);">---</span>
+            <div style="display:flex;flex-direction:column;">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--border2);">
+                <span class="metric-lbl" style="margin:0;">Particles</span>
+                <span id="particleCount" style="font-family:var(--mono);font-size:.72rem;color:var(--text);">---</span>
               </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--border-dim);">
-                <span style="font-size:0.71rem;font-weight:500;color:var(--text-sub);">Concentration</span>
-                <span id="concentration" style="font-family:var(--mono);font-size:0.78rem;color:var(--text);">---</span>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--border2);">
+                <span class="metric-lbl" style="margin:0;">Concentration</span>
+                <span id="concentration" style="font-family:var(--mono);font-size:.72rem;color:var(--text);">---</span>
               </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--border-dim);">
-                <span style="font-size:0.71rem;font-weight:500;color:var(--text-sub);">Intensity</span>
-                <span id="nanointensity" style="font-family:var(--mono);font-size:0.78rem;color:var(--text);">---</span>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--border2);">
+                <span class="metric-lbl" style="margin:0;">Intensity</span>
+                <span id="nanointensity" style="font-family:var(--mono);font-size:.72rem;color:var(--text);">---</span>
               </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--border-dim);">
-                <span style="font-size:0.71rem;font-weight:500;color:var(--text-sub);">Confidence</span>
-                <span id="confidence" style="font-family:var(--mono);font-size:0.78rem;color:var(--text);">---</span>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--border2);">
+                <span class="metric-lbl" style="margin:0;">Confidence</span>
+                <span id="confidence" style="font-family:var(--mono);font-size:.72rem;color:var(--text);">---</span>
               </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;">
-                <span style="font-size:0.71rem;font-weight:500;color:var(--text-sub);">Risk Level</span>
-                <span id="riskLevel" style="font-family:var(--mono);font-size:0.78rem;font-weight:600;">---</span>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;">
+                <span class="metric-lbl" style="margin:0;">Risk Level</span>
+                <span id="riskLevel" style="font-family:var(--ui);font-size:.82rem;font-weight:700;">---</span>
               </div>
             </div>
           </div>
@@ -938,10 +1162,7 @@
 
       <div class="panel">
         <div class="panel-head">
-          <div class="panel-title">
-            <div class="panel-title-dot"></div>
-            <i class="bi bi-clock-history"></i>Detection History
-          </div>
+          <div class="panel-title"><div class="panel-dot"></div><i class="bi bi-clock-history"></i>Detection History</div>
         </div>
         <div class="table-wrap scroll-y" style="max-height:280px;">
           <table class="data-table">
@@ -951,12 +1172,16 @@
         </div>
       </div>
 
-    </div>
-  </main>
-</div>
+    </div><!-- /nanoplastic tab -->
+
+  </main><!-- /content -->
+
+</div><!-- /shell -->
 
 <script>
-  /* ── TAB SWITCHING ── */
+  /* ══════════════════════════════
+     TAB SWITCHING
+  ══════════════════════════════ */
   function showTab(id) {
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
@@ -965,7 +1190,9 @@
     if (id === 'usv' && typeof usvMap !== 'undefined') setTimeout(() => usvMap.invalidateSize(), 220);
   }
 
-  /* ── MAP ── */
+  /* ══════════════════════════════
+     MAP
+  ══════════════════════════════ */
   let usvMap, usvIcon, route, targetLine, waypointMarkers = [];
   let autoZoomEnabled = false, initialZoomDone = false, throttleHoldTimer, throttleDragging = false;
 
@@ -974,29 +1201,35 @@
     if (throttleHoldTimer) clearTimeout(throttleHoldTimer);
     throttleHoldTimer = setTimeout(() => { throttleDragging = false; }, 700);
   }
+
   function centerAndZoom(zoomLevel) {
-    let lat = parseFloat(document.getElementById('lat').innerText);
-    let lng = parseFloat(document.getElementById('lon').innerText);
+    let lat = parseFloat(document.getElementById('lat2').innerText);
+    let lng = parseFloat(document.getElementById('lon2').innerText);
     if (lat && lng && lat != 0 && lng != 0) { usvMap.setView([lat, lng], zoomLevel || 19); return true; }
     return false;
   }
+
   function zoomToFit() {
     let bounds = [], hasPoints = false;
-    let lat = parseFloat(document.getElementById('lat').innerText);
-    let lng = parseFloat(document.getElementById('lon').innerText);
+    let lat = parseFloat(document.getElementById('lat2').innerText);
+    let lng = parseFloat(document.getElementById('lon2').innerText);
     if (lat && lng && lat != 0 && lng != 0) { bounds.push([lat, lng]); hasPoints = true; }
     waypointMarkers.forEach(m => { let ll = m.getLatLng(); bounds.push([ll.lat, ll.lng]); hasPoints = true; });
-    if (hasPoints) usvMap.fitBounds(bounds, { padding: [30, 30] });
+    if (hasPoints) usvMap.fitBounds(bounds, { padding: [50, 50] });
   }
+
   function toggleAutoZoom() {
     autoZoomEnabled = !autoZoomEnabled;
     let btn = document.getElementById('autoZoomBtn');
-    btn.style.color = autoZoomEnabled ? 'var(--teal)' : '';
-    btn.style.borderColor = autoZoomEnabled ? 'rgba(0,212,184,0.4)' : '';
+    btn.style.color       = autoZoomEnabled ? 'var(--c)' : '';
+    btn.style.borderColor = autoZoomEnabled ? 'rgba(0,229,180,.4)' : '';
+    btn.style.background  = autoZoomEnabled ? 'rgba(0,229,180,.1)' : '';
     btn.textContent = autoZoomEnabled ? 'Auto ON' : 'Auto';
     if (autoZoomEnabled) centerAndZoom(19);
   }
+
   function startCalibration() { if (confirm('Start compass calibration?')) fetch('/calibrate').then(() => alert('Started.')); }
+
   function stopReset() {
     fetch('/clear').then(() => {
       route.setLatLngs([]); targetLine.setLatLngs([]);
@@ -1004,185 +1237,253 @@
       updatePath(); updateWaypointMarkers();
     });
   }
+
   function updatePath() { fetch('/path').then(r => r.json()).then(d => { route.setLatLngs(d.map(p => [p.lat, p.lng])); }); }
+
   function updateWaypointMarkers() {
     waypointMarkers.forEach(m => usvMap.removeLayer(m)); waypointMarkers = [];
     fetch('/path').then(r => r.json()).then(d => {
       d.forEach((wp, idx) => {
-        let m = L.circleMarker([wp.lat, wp.lng], { radius: 5, color: '#00d4b8', fillOpacity: 0.9, weight: 2 })
+        let m = L.circleMarker([wp.lat, wp.lng], { radius: 5, color: '#00E5B4', fillOpacity: .9, weight: 2 })
           .bindTooltip(`WP ${idx + 1}`).addTo(usvMap);
         waypointMarkers.push(m);
       });
     });
   }
+
+  /* Bearing visual + secondary mini-tape */
   function createBearingVisual(relBearing) {
-    let val = (typeof relBearing === 'number' && isFinite(relBearing)) ? relBearing : 0;
+    let val     = (typeof relBearing === 'number' && isFinite(relBearing)) ? relBearing : 0;
     let clamped = Math.min(Math.max(val, -180), 180);
-    let posPct = ((clamped + 180) / 360) * 100;
-    let dir = clamped > 4 ? 'RIGHT' : (clamped < -4 ? 'LEFT' : 'STRAIGHT');
+    let posPct  = ((clamped + 180) / 360) * 100;
+    let dir     = clamped > 4 ? 'RIGHT' : (clamped < -4 ? 'LEFT' : 'STRAIGHT');
+
     let existing = document.getElementById('bearingVisual');
-    let fill = existing.querySelector('.bearing-track-fill');
+    let fill     = existing.querySelector('.bearing-track-fill');
     existing.innerHTML = '';
     if (fill) existing.appendChild(fill);
-    let cursor = document.createElement('div');
-    cursor.className = 'bearing-cursor';
+    let cursor   = document.createElement('div');
+    cursor.className  = 'bearing-cursor';
     cursor.style.left = posPct + '%';
     existing.appendChild(cursor);
-    document.getElementById('bearingRel').innerText = clamped.toFixed(0) + '°';
-    document.getElementById('bearingText').innerText = dir;
-  }
-  function isSyncEnabled() { return document.getElementById('syncEnabled').checked; }
-  function onSyncToggle(checked) { if (checked) updateSyncThrottle(document.getElementById('leftThrottle').value); }
-  function onServoToggle(checked) { fetch("/servo?value=" + (checked ? 1 : 0)); document.getElementById('servoState').innerText = checked ? "ON" : "OFF"; }
-  function getPumpRot() { let v = parseInt(document.getElementById('pumpRot').value); if (isNaN(v) || v < 1) v = 1; if (v > 20) v = 20; document.getElementById('pumpRot').value = v; return v; }
-  function pumpForward() { fetch("/pump?dir=fwd&rot=" + getPumpRot()); }
-  function pumpReverse() { fetch("/pump?dir=rev&rot=" + getPumpRot()); }
-  function pumpStop() { fetch("/pump?dir=stop"); }
-  function updateSyncThrottle(val) { holdThrottleUi(); let v = parseInt(val); document.getElementById('leftThrottle').value = v; document.getElementById('rightThrottle').value = v; document.getElementById('thrLeftVal').innerText = v + " µs"; document.getElementById('thrRightVal').innerText = v + " µs"; fetch("/set-sync?value=" + v); }
-  function updateLeftThrottle(val) { holdThrottleUi(); let v = parseInt(val); document.getElementById('thrLeftVal').innerText = v + " µs"; if (isSyncEnabled()) updateSyncThrottle(v); else fetch("/set-left?value=" + v); }
-  function updateRightThrottle(val) { holdThrottleUi(); let v = parseInt(val); document.getElementById('thrRightVal').innerText = v + " µs"; if (isSyncEnabled()) updateSyncThrottle(v); else fetch("/set-right?value=" + v); }
 
+    document.getElementById('bearingRel').innerText  = clamped.toFixed(0) + '°';
+    document.getElementById('bearingText').innerText = dir;
+
+    let c2 = document.getElementById('brngCursor2');
+    if (c2) c2.style.left = posPct + '%';
+    let n2 = document.getElementById('brngNum2');
+    if (n2) n2.innerText = (clamped >= 0 ? '+' : '') + clamped.toFixed(1) + '°';
+  }
+
+  /* Node dots */
+  function renderNodeDots(current, total) {
+    let container = document.getElementById('nodeDots');
+    if (!container || total < 1) return;
+    container.innerHTML = '';
+    for (let i = 0; i < total; i++) {
+      let d   = document.createElement('div');
+      let cls = 'ndot';
+      if (i < current)   cls += ' done';
+      if (i === current) cls += ' act';
+      d.className = cls;
+      container.appendChild(d);
+    }
+  }
+
+  /* Control helpers */
+  function isSyncEnabled()  { return document.getElementById('syncEnabled').checked; }
+  function onSyncToggle(c)  { if (c) updateSyncThrottle(document.getElementById('leftThrottle').value); }
+  function onServoToggle(c) { fetch("/servo?value=" + (c ? 1 : 0)); document.getElementById('servoState').innerText = c ? "ON" : "OFF"; }
+  function getPumpRot()     { let v = parseInt(document.getElementById('pumpRot').value); if (isNaN(v) || v < 1) v = 1; if (v > 20) v = 20; document.getElementById('pumpRot').value = v; return v; }
+  function pumpForward()    { fetch("/pump?dir=fwd&rot=" + getPumpRot()); }
+  function pumpReverse()    { fetch("/pump?dir=rev&rot=" + getPumpRot()); }
+  function pumpStop()       { fetch("/pump?dir=stop"); }
+
+  function updateSyncThrottle(val) {
+    holdThrottleUi(); let v = parseInt(val);
+    document.getElementById('leftThrottle').value  = v;
+    document.getElementById('rightThrottle').value = v;
+    document.getElementById('thrLeftVal').innerText  = v + " µs";
+    document.getElementById('thrRightVal').innerText = v + " µs";
+    fetch("/set-sync?value=" + v);
+  }
+  function updateLeftThrottle(val) {
+    holdThrottleUi(); let v = parseInt(val);
+    document.getElementById('thrLeftVal').innerText = v + " µs";
+    if (isSyncEnabled()) updateSyncThrottle(v); else fetch("/set-left?value=" + v);
+  }
+  function updateRightThrottle(val) {
+    holdThrottleUi(); let v = parseInt(val);
+    document.getElementById('thrRightVal').innerText = v + " µs";
+    if (isSyncEnabled()) updateSyncThrottle(v); else fetch("/set-right?value=" + v);
+  }
+
+  function setText(id, val) { let el = document.getElementById(id); if (el) el.innerText = val; }
+
+  /* Init Leaflet with OpenStreetMap */
   if (document.getElementById('map')) {
     usvMap = L.map('map').setView([14.5915, 121.0965], 18);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 21 }).addTo(usvMap);
-    usvIcon = L.circleMarker([0, 0], { radius: 7, color: '#f43f5e', fillColor: '#f43f5e', fillOpacity: 1, weight: 3 }).addTo(usvMap);
-    route = L.polyline([], { color: '#00d4b8', weight: 2.5, opacity: 0.85 }).addTo(usvMap);
-    targetLine = L.polyline([], { color: '#f59e0b', weight: 2, dashArray: '6,10', opacity: 0.8 }).addTo(usvMap);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 21,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(usvMap);
+    usvIcon    = L.circleMarker([0, 0], { radius: 8, color: '#FF3555', fillColor: '#FF3555', fillOpacity: 1, weight: 3 }).addTo(usvMap);
+    route      = L.polyline([], { color: '#00E5B4', weight: 2.5, opacity: .85 }).addTo(usvMap);
+    targetLine = L.polyline([], { color: '#FFB627', weight: 2, dashArray: '6,10', opacity: .8 }).addTo(usvMap);
     usvMap.on('click', e => {
       fetch(`/addWP?lat=${e.latlng.lat}&lng=${e.latlng.lng}`).then(() => { updateWaypointMarkers(); updatePath(); });
     });
     updatePath(); updateWaypointMarkers();
   }
 
-  /* ── TELEMETRY POLL ── */
+  /* ══════════════════════════════
+     TELEMETRY POLL (500 ms)
+  ══════════════════════════════ */
   setInterval(() => {
     fetch('/data').then(r => r.json()).then(d => {
       let hasFix = (d.gpsValid == 1) || (d.lat != 0 && d.lng != 0);
-      document.getElementById('lat').innerText        = hasFix ? d.lat.toFixed(6) : '---';
-      document.getElementById('lon').innerText        = hasFix ? d.lng.toFixed(6) : '---';
-      document.getElementById('head').innerText       = d.head.toFixed(1) + "°";
-      document.getElementById('tbrng').innerText      = d.tbrng.toFixed(1) + "°";
-      document.getElementById('relBearing').innerText = d.relBearing.toFixed(1) + "°";
-      document.getElementById('dist').innerText       = d.dist.toFixed(1) + "m";
-      document.getElementById('wp').innerText         = "Node " + (d.wp + 1);
-      document.getElementById('direction').innerText  = d.direction;
-      let inten = d.intensity || 0;
-      document.getElementById('intensity').innerText  = inten + "%";
-      document.getElementById('intensityFill').style.width = inten + "%";
-      document.getElementById('xte').innerText        = d.xte.toFixed(1) + "m";
-      document.getElementById('waterTemp').innerText  = d.waterTemp ? d.waterTemp.toFixed(2) + " °C" : "---";
-      document.getElementById('waterPH').innerText    = d.waterPH ? d.waterPH.toFixed(2) : "---";
-      document.getElementById('waterTDS').innerText   = d.waterTDS ? Math.round(d.waterTDS) + " ppm" : "---";
-      if (d.hmRiskLevel)   document.getElementById('hmRiskLevel').innerText   = d.hmRiskLevel;
-      if (d.hmRiskScore)   document.getElementById('hmRiskScore').innerText   = "Score: " + d.hmRiskScore + "/100";
-      if (d.hmRiskReasons) document.getElementById('hmRiskReasons').innerText = d.hmRiskReasons.join(' · ');
-      let error = d.tbrng - d.head; if (error > 180) error -= 360; if (error < -180) error += 360;
-      document.getElementById('err').innerText = error.toFixed(1) + "°";
-      document.getElementById('time').innerText = new Date().toLocaleTimeString();
+      let latStr = hasFix ? d.lat.toFixed(6) : '---';
+      let lonStr = hasFix ? d.lng.toFixed(6) : '---';
+      let inten  = d.intensity || 0;
+
+      /* Navigation tab metrics */
+      setText('lat2',       latStr);
+      setText('lon2',       lonStr);
+      setText('head2',       d.head.toFixed(1)       + "°");
+      setText('tbrng2',      d.tbrng.toFixed(1)      + "°");
+      setText('relBearing2', d.relBearing.toFixed(1) + "°");
+      setText('dist2',       d.dist.toFixed(1)       + "m");
+      setText('wp2',        "Node " + (d.wp + 1));
+      setText('direction2',  d.direction);
+      setText('intensity2',  inten + "%");
+      setText('xte2',        d.xte.toFixed(1)        + "m");
+      let iF2 = document.getElementById('intensityFill2');
+      if (iF2) iF2.style.width = inten + '%';
+
+      let error = d.tbrng - d.head;
+      if (error >  180) error -= 360;
+      if (error < -180) error += 360;
+      setText('err2', error.toFixed(1) + "°");
+
+      /* Compass overlay (USV tab) */
+      setText('head',  d.head.toFixed(1)  + "°");
+      setText('tbrng', d.tbrng.toFixed(1) + "°");
+      let needle  = document.getElementById('compassNeedle');
+      if (needle)  needle.setAttribute('transform',  `rotate(${d.head},  80, 80)`);
+      let ctarget = document.getElementById('compassTarget');
+      if (ctarget) ctarget.setAttribute('transform', `rotate(${d.tbrng}, 80, 80)`);
+
       createBearingVisual(d.relBearing);
-      if (d.thrL && !throttleDragging) { document.getElementById('thrLeftVal').innerText  = d.thrL + " µs"; document.getElementById('leftThrottle').value  = d.thrL; }
-      if (d.thrR && !throttleDragging) { document.getElementById('thrRightVal').innerText = d.thrR + " µs"; document.getElementById('rightThrottle').value = d.thrR; }
-      if (d.manual !== undefined) document.getElementById('manualOverrideVal').innerText = d.manual ? "ON" : "OFF";
+
+      let total = Math.max(waypointMarkers.length, d.wp + 1);
+      renderNodeDots(d.wp, total);
+      setText('wpProgress', `Node ${d.wp + 1} / ${waypointMarkers.length || '?'}`);
+
+      /* Sensor data */
+      setText('waterTemp', d.waterTemp ? d.waterTemp.toFixed(2) + " °C" : "---");
+      setText('waterPH',   d.waterPH   ? d.waterPH.toFixed(2)           : "---");
+      setText('waterTDS',  d.waterTDS  ? Math.round(d.waterTDS) + " ppm": "---");
+      if (d.hmRiskLevel)   setText('hmRiskLevel',   d.hmRiskLevel);
+      if (d.hmRiskScore)   setText('hmRiskScore',   "Score: " + d.hmRiskScore + "/100");
+      if (d.hmRiskReasons && Array.isArray(d.hmRiskReasons))
+        setText('hmRiskReasons', d.hmRiskReasons.join(' · '));
+
+      /* Clock */
+      document.getElementById('time').innerText = new Date().toLocaleTimeString();
+
+      /* Throttle sync */
+      if (d.thrL && !throttleDragging) { setText('thrLeftVal',  d.thrL + " µs"); document.getElementById('leftThrottle').value  = d.thrL; }
+      if (d.thrR && !throttleDragging) { setText('thrRightVal', d.thrR + " µs"); document.getElementById('rightThrottle').value = d.thrR; }
+      if (d.manual !== undefined) setText('manualOverrideVal', d.manual ? "ON" : "OFF");
       if (d.servoOn !== undefined) document.getElementById('servoToggle').checked = (d.servoOn == 1);
+
+      /* Map marker + auto-zoom */
       if (hasFix) {
         usvIcon.setLatLng([d.lat, d.lng]);
         if (autoZoomEnabled) centerAndZoom(19);
         else if (!initialZoomDone && d.lat != 0) { centerAndZoom(18); initialZoomDone = true; }
-        if (d.tbrng > 0 && d.wp >= 0) fetch('/path').then(r => r.json()).then(pathData => {
-          if (pathData[d.wp]) targetLine.setLatLngs([[d.lat, d.lng], [pathData[d.wp].lat, pathData[d.wp].lng]]);
-        });
+        if (d.tbrng > 0 && d.wp >= 0) {
+          fetch('/path').then(r => r.json()).then(pathData => {
+            if (pathData[d.wp]) targetLine.setLatLngs([[d.lat, d.lng], [pathData[d.wp].lat, pathData[d.wp].lng]]);
+          });
+        }
       }
-      let loraStr = (d.rxAge && d.rxAge < 2000) ? `LoRa: OK (${d.rxAge}ms)` : 'LoRa: LOST';
-      let gpsStr  = hasFix ? `GPS: FIXED (${d.gpsSats || 0}sat)` : 'GPS: NO FIX';
-      document.getElementById('loraStat').innerText    = loraStr;
-      document.getElementById('gpsStatus').innerText   = gpsStr;
-      document.getElementById('loraStatMob').innerText = loraStr.replace('LoRa: ', '');
-      document.getElementById('gpsStatMob').innerText  = gpsStr.replace('GPS: ', '');
+
+      /* Status strings */
+      let loraStr = (d.rxAge && d.rxAge < 2000) ? `OK · ${d.rxAge}ms` : 'LOST';
+      let gpsStr  = hasFix ? `FIXED · ${d.gpsSats || 0}sat` : 'NO FIX';
+      setText('loraStat',   `LoRa: ${loraStr}`);
+      setText('gpsStatus',  `GPS: ${gpsStr}`);
+      setText('loraStatMob', loraStr);
+      setText('gpsStatMob',  gpsStr);
+
     }).catch(e => console.warn(e));
   }, 500);
 
-  /* ═══════════════════════════════════════════════
-     NANOPLASTIC – REAL CONFIDENCE & INSTANT UPDATES
-     ═══════════════════════════════════════════════ */
+  /* ══════════════════════════════
+     NANOPLASTIC
+  ══════════════════════════════ */
   const API_BASE = '';
+  let captureInProgress = false;
 
   function setCaptureStatus(msg, isError = false) {
     let el = document.getElementById('captureStatus');
     if (!el) return;
-    el.innerText = msg;
-    el.style.color = isError ? 'var(--rose)' : 'var(--text-sub)';
+    el.innerText   = msg;
+    el.style.color = isError ? 'var(--red)' : 'var(--text-sub)';
   }
-
-  let captureInProgress = false;
 
   async function triggerCapture() {
     if (captureInProgress) return;
     let btn = document.getElementById('captureBtn');
     if (!btn) return;
-    btn.disabled = true;
-    captureInProgress = true;
+    btn.disabled = true; captureInProgress = true;
     setCaptureStatus('CAPTURING');
-
     try {
       let res = await fetch(`${API_BASE}/trigger_capture`, { method: 'POST' });
-      if (res.status === 202) {
-        await pollCaptureStatus();
-      } else {
+      if (res.status === 202) { await pollCaptureStatus(); }
+      else {
         let err = await res.json();
         setCaptureStatus(`Error: ${err.error || 'Unknown'}`, true);
-        btn.disabled = false;
-        captureInProgress = false;
+        btn.disabled = false; captureInProgress = false;
       }
     } catch (e) {
       setCaptureStatus('Request failed', true);
-      btn.disabled = false;
-      captureInProgress = false;
+      btn.disabled = false; captureInProgress = false;
     }
   }
 
   async function pollCaptureStatus() {
-    let attempts = 0;
-    const maxAttempts = 120;
-
-    return new Promise((resolve) => {
+    let attempts = 0, maxAttempts = 120;
+    return new Promise(resolve => {
       let interval = setInterval(async () => {
         attempts++;
         try {
-          let res = await fetch(`${API_BASE}/api/capture_status`);
+          let res  = await fetch(`${API_BASE}/api/capture_status`);
           let data = await res.json();
-
           if (!data.is_processing) {
             clearInterval(interval);
             document.getElementById('captureBtn').disabled = false;
             captureInProgress = false;
-
-            if (data.last_result) {
-              setCaptureStatus('✓ Complete');
-              await refreshAll();
-            } else if (data.error) {
-              setCaptureStatus(`Failed: ${data.error}`, true);
-            } else {
-              setCaptureStatus('No result', true);
-            }
+            if (data.last_result)  { setCaptureStatus('✓ Complete'); await refreshAll(); }
+            else if (data.error)   { setCaptureStatus(`Failed: ${data.error}`, true); }
+            else                   { setCaptureStatus('No result', true); }
             resolve();
           } else {
-            let elapsed = data.elapsed_seconds || attempts;
-            setCaptureStatus(`PROCESSING (${elapsed}s)`);
-
+            setCaptureStatus(`PROCESSING (${data.elapsed_seconds || attempts}s)`);
             if (attempts >= maxAttempts) {
               clearInterval(interval);
               document.getElementById('captureBtn').disabled = false;
               captureInProgress = false;
-              setCaptureStatus('Timeout', true);
-              resolve();
+              setCaptureStatus('Timeout', true); resolve();
             }
           }
         } catch (e) {
           clearInterval(interval);
           document.getElementById('captureBtn').disabled = false;
           captureInProgress = false;
-          setCaptureStatus('Poll error', true);
-          resolve();
+          setCaptureStatus('Poll error', true); resolve();
         }
       }, 1000);
     });
@@ -1190,20 +1491,18 @@
 
   async function fetchStats() {
     try {
-      let res = await fetch(`${API_BASE}/api/stats`);
-      let stats = await res.json();
-      document.getElementById('totalSamples').innerText  = stats.total_samples || 0;
-      document.getElementById('avgParticles').innerText  = stats.avg_particles || 0;
-      document.getElementById('highRiskCount').innerText = stats.high_risk_count || 0;
-      document.getElementById('maxParticles').innerText  = stats.max_particles || 0;
+      let stats = await (await fetch(`${API_BASE}/api/stats`)).json();
+      setText('totalSamples',  stats.total_samples   || 0);
+      setText('avgParticles',  stats.avg_particles   || 0);
+      setText('highRiskCount', stats.high_risk_count || 0);
+      setText('maxParticles',  stats.max_particles   || 0);
     } catch (e) { console.warn(e); }
   }
 
   async function fetchLatestImage() {
     try {
-      let res = await fetch(`${API_BASE}/api/latest_image`);
-      let data = await res.json();
-      let img = document.getElementById('latestImage');
+      let data  = await (await fetch(`${API_BASE}/api/latest_image`)).json();
+      let img   = document.getElementById('latestImage');
       let noImg = document.getElementById('noImageMessage');
       if (data.filename) {
         img.src = `/images/processed/${data.filename}?t=${Date.now()}`;
@@ -1218,52 +1517,50 @@
 
   async function fetchDetections() {
     try {
-      let res = await fetch(`${API_BASE}/api/detections`);
-      let detections = await res.json();
+      let detections = await (await fetch(`${API_BASE}/api/detections`)).json();
       if (detections.length > 0) {
         let latest = detections[detections.length - 1];
-        document.getElementById('particleCount').innerText  = latest.particle_count || 0;
-        document.getElementById('concentration').innerText  = latest.estimated_concentration_ug_L ? latest.estimated_concentration_ug_L + " µg/L" : '---';
-        document.getElementById('nanointensity').innerText  = latest.mean_intensity || '---';
-        document.getElementById('confidence').innerText     = latest.avg_confidence ? latest.avg_confidence + '%' : '---';
-        let risk = latest.risk_level || 'LOW';
+        setText('particleCount', latest.particle_count || 0);
+        setText('concentration', latest.estimated_concentration_ug_L ? latest.estimated_concentration_ug_L + " µg/L" : '---');
+        setText('nanointensity', latest.mean_intensity  || '---');
+        setText('confidence',    latest.avg_confidence  ? latest.avg_confidence + '%' : '---');
+        let risk   = latest.risk_level || 'LOW';
         let riskEl = document.getElementById('riskLevel');
-        riskEl.innerText = risk;
-        riskEl.style.color = risk === 'HIGH' ? 'var(--rose)' : risk === 'MEDIUM' ? 'var(--amber)' : 'var(--emerald)';
-
-        let tbody = document.getElementById('historyBody');
+        if (riskEl) {
+          riskEl.innerText   = risk;
+          riskEl.style.color = risk === 'HIGH' ? 'var(--red)' : risk === 'MEDIUM' ? 'var(--amber)' : 'var(--green)';
+        }
+        let tbody  = document.getElementById('historyBody');
         let recent = detections.slice(-20).reverse();
-        tbody.innerHTML = recent.length ? recent.map(d => {
-          let t = d.timestamp ? d.timestamp.substr(8, 6).replace(/(..)(..)(..)/,'$1:$2:$3') : '--:--:--';
-          let rc = (d.risk_level || 'low').toLowerCase();
-          return `<tr>
-            <td>${t}</td>
-            <td>${d.particle_count||0}</td>
-            <td>${d.estimated_concentration_ug_L||'?'}</td>
-            <td>${d.mean_intensity||'---'}</td>
-            <td>${d.avg_confidence ? d.avg_confidence+'%' : '---'}</td>
-            <td><span class="badge badge-${rc}">${d.risk_level||'LOW'}</span></td>
-          </tr>`;
-        }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:1.5rem;">No data yet</td></tr>';
+        tbody.innerHTML = recent.length
+          ? recent.map(d => {
+              let t  = d.timestamp ? d.timestamp.substr(8,6).replace(/(..)(..)(..)/,'$1:$2:$3') : '--:--:--';
+              let rc = (d.risk_level || 'low').toLowerCase();
+              return `<tr>
+                <td>${t}</td>
+                <td>${d.particle_count||0}</td>
+                <td>${d.estimated_concentration_ug_L||'?'}</td>
+                <td>${d.mean_intensity||'---'}</td>
+                <td>${d.avg_confidence ? d.avg_confidence+'%' : '---'}</td>
+                <td><span class="badge badge-${rc}">${d.risk_level||'LOW'}</span></td>
+              </tr>`;
+            }).join('')
+          : '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:1.5rem;">No data yet</td></tr>';
       }
     } catch (e) { console.warn(e); }
   }
 
-  async function refreshAll() {
-    await fetchStats();
-    await fetchLatestImage();
-    await fetchDetections();
-  }
-
+  async function refreshAll() { await fetchStats(); await fetchLatestImage(); await fetchDetections(); }
   document.getElementById('captureBtn')?.addEventListener('click', triggerCapture);
   refreshAll();
   setInterval(refreshAll, 5000);
 
-  /* ── HEAVY METAL LOG ── */
+  /* ══════════════════════════════
+     HEAVY METAL LOG
+  ══════════════════════════════ */
   async function fetchHeavyMetalLog() {
     try {
-      let res = await fetch(`${API_BASE}/api/heavy_metal_log`);
-      let data = await res.json();
+      let data  = await (await fetch(`${API_BASE}/api/heavy_metal_log`)).json();
       let tbody = document.getElementById('hmLogBody');
       if (!data || data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-dim);">No log entries yet</td></tr>';
@@ -1271,7 +1568,11 @@
       }
       tbody.innerHTML = data.map(r => {
         let rc = (r.Risk || '').toLowerCase();
-        return `<tr><td>${r.Date}</td><td>${r.Time}</td><td>${r['TDS (ppm)']}</td><td>${r.pH}</td><td>${r['Temp (°C)']}</td><td><span class="badge badge-${rc}">${r.Risk}</span></td></tr>`;
+        return `<tr>
+          <td>${r.Date}</td><td>${r.Time}</td>
+          <td>${r['TDS (ppm)']}</td><td>${r.pH}</td><td>${r['Temp (°C)']}</td>
+          <td><span class="badge badge-${rc}">${r.Risk}</span></td>
+        </tr>`;
       }).join('');
     } catch (e) { console.warn(e); }
   }
