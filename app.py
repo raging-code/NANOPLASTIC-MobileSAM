@@ -3,16 +3,16 @@ import json
 import csv
 import time
 import threading
-import cv2
-import numpy as np
-import torch
-import requests
 from datetime import datetime
 from flask import Flask, Response, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from waitress import serve
 
 # ---------- Nanoplastic imports ----------
+import cv2
+import numpy as np
+import torch
+import requests
 from mobile_sam import sam_model_registry, SamAutomaticMaskGenerator
 
 # ==================== CONFIGURATION ====================
@@ -297,7 +297,6 @@ def detect_blobs(image_gray, draw_on_image=None):
     for kp in keypoints:
         x, y = int(kp.pt[0]), int(kp.pt[1])
         size = kp.size
-        # Use the actual response, cap at 1.0, fallback to 0.5
         if hasattr(kp, 'response') and kp.response > 0:
             confidence = min(kp.response, 1.0)
         else:
@@ -373,7 +372,7 @@ def count_particles_combined(image_bgr):
         avg_confidence = 0.0
     else:
         avg_intensity = total_intensity / total_count
-        avg_confidence = (total_confidence / total_count) * 100   # percentage
+        avg_confidence = (total_confidence / total_count) * 100
     max_particles = detection_params.get('max_particles_per_frame', 5000)
     if total_count > max_particles:
         total_count = max_particles
@@ -535,19 +534,168 @@ def proxy_to_pi(endpoint, method='GET', data=None, params=None):
 # ==================== HEAVY METAL LOGGING ====================
 latest_telemetry = None
 
-@app.route('/data')
-def proxy_data():
-    content, status, ctype = proxy_to_pi('/data')
-    if status == 200 and ctype == 'application/json':
-        try:
-            data = json.loads(content.decode('utf-8'))
-            global latest_telemetry
-            latest_telemetry = data
-        except:
-            pass
-    return Response(content, status=status, mimetype=ctype)
+# ---------- Fuzzy logic from Raspberry Pi (exact copy) ----------
+def _to_float(v) -> float | None:
+    try:
+        if v is None:
+            return None
+        return float(v)
+    except Exception:
+        return None
 
+def heavy_metal_risk(ph: float | None, tds_ppm: float | None, temp_c: float | None) -> dict:
+    if ph is None or tds_ppm is None or temp_c is None:
+        return {"score": None, "level": "NO DATA", "reasons": ["missing sensor data"]}
+
+    def tri(x: float, a: float, b: float, c: float) -> float:
+        if x <= a or x >= c:
+            return 0.0
+        if x == b:
+            return 1.0
+        if x < b:
+            return (x - a) / (b - a)
+        return (c - x) / (c - b)
+
+    def trap(x: float, a: float, b: float, c: float, d: float) -> float:
+        if x <= a or x >= d:
+            return 0.0
+        if b <= x <= c:
+            return 1.0
+        if x < b:
+            return (x - a) / (b - a)
+        return (d - x) / (d - c)
+
+    ph_acid = trap(ph, 0.0, 0.0, 5.5, 6.5)
+    ph_neutral = tri(ph, 6.3, 7.0, 7.7)
+    ph_basic = trap(ph, 7.4, 8.0, 14.0, 14.0)
+
+    tds_low = trap(tds_ppm, 0.0, 0.0, 250.0, 400.0)
+    tds_med = tri(tds_ppm, 300.0, 550.0, 800.0)
+    tds_high = trap(tds_ppm, 650.0, 900.0, 5000.0, 5000.0)
+
+    temp_cool = trap(temp_c, -10.0, -10.0, 18.0, 22.0)
+    temp_norm = tri(temp_c, 20.0, 26.0, 32.0)
+    temp_warm = trap(temp_c, 30.0, 34.0, 60.0, 60.0)
+
+    def out_low(x: float) -> float:
+        return trap(x, 0.0, 0.0, 25.0, 45.0)
+
+    def out_med(x: float) -> float:
+        return tri(x, 35.0, 55.0, 75.0)
+
+    def out_high(x: float) -> float:
+        return trap(x, 65.0, 80.0, 100.0, 100.0)
+
+    rules: list[tuple[str, float, str]] = []
+    rules.append(("acid & highTDS -> HIGH", min(ph_acid, tds_high), "HIGH"))
+    rules.append(("acid & medTDS -> HIGH", min(ph_acid, tds_med), "HIGH"))
+    rules.append(("acid & lowTDS -> MED", min(ph_acid, tds_low), "MED"))
+    rules.append(("neutral & highTDS -> MED", min(ph_neutral, tds_high), "MED"))
+    rules.append(("neutral & medTDS -> MED", min(ph_neutral, tds_med), "MED"))
+    rules.append(("neutral & lowTDS -> LOW", min(ph_neutral, tds_low), "LOW"))
+    rules.append(("basic & highTDS -> MED", min(ph_basic, tds_high), "MED"))
+    rules.append(("basic & medTDS -> LOW", min(ph_basic, tds_med), "LOW"))
+    rules.append(("basic & lowTDS -> LOW", min(ph_basic, tds_low), "LOW"))
+    rules.append(("warm & acidic -> HIGH", min(temp_warm, ph_acid), "HIGH"))
+    rules.append(("warm & highTDS -> HIGH", min(temp_warm, tds_high), "HIGH"))
+    rules.append(("cool & neutral & lowTDS -> LOW", min(temp_cool, ph_neutral, tds_low), "LOW"))
+
+    step = 1.0
+    num = 0.0
+    den = 0.0
+    for i in range(0, 101):
+        x = float(i)
+        mu = 0.0
+        for _, strength, out_set in rules:
+            if strength <= 0.0:
+                continue
+            if out_set == "LOW":
+                mu = max(mu, min(strength, out_low(x)))
+            elif out_set == "MED":
+                mu = max(mu, min(strength, out_med(x)))
+            else:
+                mu = max(mu, min(strength, out_high(x)))
+        num += x * mu * step
+        den += mu * step
+    if den <= 0.0:
+        score = 0.0
+    else:
+        score = num / den
+
+    level = "LOW"
+    if score >= 70.0:
+        level = "HIGH"
+    elif score >= 40.0:
+        level = "MED"
+
+    top = sorted([(s, name) for (name, s, _) in rules if s > 0.15], reverse=True)[:3]
+    reasons = [name for _, name in top]
+    if level == "HIGH" and not reasons:
+        reasons = ["combination indicates elevated risk"]
+    return {"score": round(float(score), 1), "level": level, "reasons": reasons}
+
+# ---------- One-time migration of existing CSV ----------
+def migrate_heavy_metal_log():
+    csv_path = os.path.join(BASE_DIR, 'heavy_metal_log.csv')
+    if not os.path.exists(csv_path):
+        return
+    # read all rows
+    with open(csv_path, 'r', newline='') as f:
+        reader = csv.reader(f)
+        rows = list(reader)
+    if not rows:
+        return
+    header = rows[0]
+    # check if already migrated (WQI column exists)
+    if 'WQI' in header:
+        print("Heavy metal log already has WQI column, skipping migration.")
+        return
+    new_header = header + ['WQI'] if 'WQI' not in header else header
+    new_rows = [new_header]
+    # parse date and time, convert date to DD/MM/YY
+    date_formats = ['%d/%m/%Y', '%Y-%m-%d', '%d/%m/%y']
+    time_formats = ['%H:%M:%S', '%H:%M']  # seconds may exist
+    for row in rows[1:]:
+        if not row:
+            continue
+        date_str = row[0].strip()
+        time_str = row[1].strip()
+        tds_str = row[2].strip()
+        ph_str = row[3].strip()
+        temp_str = row[4].strip()
+        # Convert date
+        new_date = date_str
+        dt = None
+        for fmt in date_formats:
+            try:
+                dt = datetime.strptime(date_str, fmt)
+                break
+            except ValueError:
+                continue
+        if dt is None:
+            # fallback: keep original
+            new_date = date_str
+        else:
+            new_date = dt.strftime('%d/%m/%y')
+        # parse TDS, pH, temp
+        tds = _to_float(tds_str)
+        ph = _to_float(ph_str)
+        temp = _to_float(temp_str)
+        risk = heavy_metal_risk(ph, tds, temp)
+        wqi = risk['score'] if risk['score'] is not None else ''
+        new_row = [new_date, time_str, tds_str, ph_str, temp_str, row[5], str(wqi)]
+        new_rows.append(new_row)
+    # overwrite file
+    with open(csv_path, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerows(new_rows)
+    print("Heavy metal log migrated: added WQI, dates converted to DD/MM/YY.")
+
+# ==================== HEAVY METAL LOGGER (updated) ====================
 def heavy_metal_logger():
+    # Ensure the file has the new header if it doesn't exist yet
+    csv_file = os.path.join(BASE_DIR, 'heavy_metal_log.csv')
+    write_header = not os.path.isfile(csv_file)
     while True:
         time.sleep(300)
         if latest_telemetry:
@@ -555,48 +703,32 @@ def heavy_metal_logger():
             water_ph = latest_telemetry.get('waterPH', '')
             water_tds = latest_telemetry.get('waterTDS', '')
             risk_level = latest_telemetry.get('hmRiskLevel', '')
+            wqi_score = latest_telemetry.get('hmRiskScore', '')
+            # If score missing, compute from raw values
+            if wqi_score == '' or wqi_score is None:
+                ph = _to_float(water_ph)
+                tds = _to_float(water_tds)
+                temp = _to_float(water_temp)
+                if ph is not None and tds is not None and temp is not None:
+                    risk = heavy_metal_risk(ph, tds, temp)
+                    wqi_score = risk['score']
+                    if not risk_level or risk_level == '':
+                        risk_level = risk['level']
             timestamp = datetime.now()
-            date_str = timestamp.strftime('%Y-%m-%d')
-            time_str = timestamp.strftime('%H:%M:%S')
-            csv_file = os.path.join(BASE_DIR, 'heavy_metal_log.csv')
-            file_exists = os.path.isfile(csv_file)
+            date_str = timestamp.strftime('%d/%m/%y')
+            time_str = timestamp.strftime('%H:%M')
             with open(csv_file, 'a', newline='') as f:
                 writer = csv.writer(f)
-                if not file_exists:
-                    writer.writerow(['Date', 'Time', 'TDS (ppm)', 'pH', 'Temp (°C)', 'Risk'])
-                writer.writerow([date_str, time_str, water_tds, water_ph, water_temp, risk_level])
-
-# ==================== NEW ENDPOINTS ====================
-@app.route('/api/latest_image')
-def api_latest_image():
-    if not os.path.exists(PROCESSED_FOLDER):
-        return jsonify({'filename': None})
-    files = [f for f in os.listdir(PROCESSED_FOLDER) if f.startswith('processed_') and f.endswith('.jpg')]
-    if not files:
-        return jsonify({'filename': None})
-    latest = sorted(files)[-1]
-    return jsonify({'filename': latest})
-
-@app.route('/api/heavy_metal_log')
-def api_heavy_metal_log():
-    csv_file = os.path.join(BASE_DIR, 'heavy_metal_log.csv')
-    if not os.path.exists(csv_file):
-        return jsonify([])
-    data = []
-    with open(csv_file, 'r') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            data.append({
-                'Date': row.get('Date', ''),
-                'Time': row.get('Time', ''),
-                'TDS (ppm)': row.get('TDS (ppm)', ''),
-                'pH': row.get('pH', ''),
-                'Temp (°C)': row.get('Temp (°C)', ''),
-                'Risk': row.get('Risk', '')
-            })
-    return jsonify(data[-100:])
+                if write_header:
+                    writer.writerow(['Date', 'Time', 'TDS (ppm)', 'pH', 'Temp (°C)', 'Risk', 'WQI'])
+                    write_header = False
+                writer.writerow([date_str, time_str, water_tds, water_ph, water_temp, risk_level, wqi_score])
 
 # ==================== FLASK ROUTES ====================
+# ... (existing routes unchanged, except /data endpoint which we already use for telemetry)
+# We will not repeat all routes to save space, but they remain exactly the same.
+# Below we include the full list to keep the file complete.
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -707,7 +839,6 @@ def capture_and_analyze():
             particle_count, mean_intensity, avg_confidence, annotated = count_particles_combined(frame)
         concentration = estimate_concentration(particle_count, mean_intensity)
 
-        # Risk thresholds for 1 mL sample
         risk_level = 'HIGH' if particle_count > 100 else 'MEDIUM' if particle_count > 10 else 'LOW'
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
@@ -857,6 +988,51 @@ def blob_params_route():
         blob_detector = create_blob_detector(blob_params)
         return jsonify({'status': 'ok', 'params': blob_params})
 
+# ---------- Existing /data proxy (unchanged) ----------
+@app.route('/data')
+def proxy_data():
+    content, status, ctype = proxy_to_pi('/data')
+    if status == 200 and ctype == 'application/json':
+        try:
+            data = json.loads(content.decode('utf-8'))
+            global latest_telemetry
+            latest_telemetry = data
+        except:
+            pass
+    return Response(content, status=status, mimetype=ctype)
+
+# ---------- New endpoint to serve the heavy metal log ----------
+@app.route('/api/heavy_metal_log')
+def api_heavy_metal_log():
+    csv_file = os.path.join(BASE_DIR, 'heavy_metal_log.csv')
+    if not os.path.exists(csv_file):
+        return jsonify([])
+    data = []
+    with open(csv_file, 'r', newline='') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            data.append({
+                'Date': row.get('Date', ''),
+                'Time': row.get('Time', ''),
+                'TDS (ppm)': row.get('TDS (ppm)', ''),
+                'pH': row.get('pH', ''),
+                'Temp (°C)': row.get('Temp (°C)', ''),
+                'Risk': row.get('Risk', ''),
+                'WQI': row.get('WQI', '')   # <-- added
+            })
+    return jsonify(data[-100:])
+
+# ---------- New endpoint for latest image (unchanged) ----------
+@app.route('/api/latest_image')
+def api_latest_image():
+    if not os.path.exists(PROCESSED_FOLDER):
+        return jsonify({'filename': None})
+    files = [f for f in os.listdir(PROCESSED_FOLDER) if f.startswith('processed_') and f.endswith('.jpg')]
+    if not files:
+        return jsonify({'filename': None})
+    latest = sorted(files)[-1]
+    return jsonify({'filename': latest})
+
 # ==================== MAIN ====================
 def start_camera_thread():
     camera_thread = threading.Thread(target=camera_worker, daemon=True)
@@ -869,9 +1045,15 @@ if __name__ == '__main__':
     print(f"Proxying USV requests to {RASPI_URL}")
     print(f"Detection mode: {DETECTION_MODE}")
     print("=" * 60)
+
+    # Migrate existing heavy_metal_log.csv before starting the logger
+    migrate_heavy_metal_log()
+
     start_camera_thread()
+
     hm_thread = threading.Thread(target=heavy_metal_logger, daemon=True)
     hm_thread.start()
     print("Heavy metal logger started (every 5 min).")
+
     print("Server running at http://localhost:5000")
     serve(app, host='0.0.0.0', port=5000, threads=8)

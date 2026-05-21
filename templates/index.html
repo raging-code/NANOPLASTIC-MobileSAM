@@ -4,782 +4,685 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>AquaScan · USV Command</title>
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 
   <style>
-    /* ═══════════════════════════════════════════
-       ATLAS DESIGN SYSTEM — AquaScan USV v2.1
-       Fonts: Rajdhani (UI) + JetBrains Mono (data)
-    ═══════════════════════════════════════════ */
     :root {
-      --c:           #00E5B4;
-      --c-dim:       rgba(0,229,180,.07);
-      --c-glow:      rgba(0,229,180,.22);
-      --c-soft:      rgba(0,229,180,.55);
-      --amber:       #FFB627;
-      --amber-dim:   rgba(255,182,39,.08);
-      --red:         #FF3555;
-      --red-dim:     rgba(255,53,85,.08);
-      --green:       #2AFC6A;
-      --green-dim:   rgba(42,252,106,.08);
-      --indigo:      #6366f1;
-      --bg:          #02060E;
-      --glass:       rgba(3,8,22,.9);
-      --glass-ov:    rgba(2,5,16,.88);
-      --border:      rgba(0,229,180,.13);
-      --border2:     rgba(0,229,180,.07);
-      --text:        #D4F2EA;
-      --text-sub:    rgba(212,242,234,.52);
-      --text-dim:    rgba(212,242,234,.24);
-      --mono:        'JetBrains Mono', monospace;
-      --ui:          'Rajdhani', sans-serif;
-      --sidebar-w:   222px;
-      --topbar-h:    52px;
-      --mobtab-h:    54px;
+      --bg:         #c8d8e4;
+      --card:       #111a24;
+      --card2:      #0d1520;
+      --card3:      #0a1219;
+      --accent:     #00c6ff;
+      --accent-dim: rgba(0,198,255,.12);
+      --amber:      #f5c842;
+      --amber-dim:  rgba(245,200,66,.10);
+      --emerald:    #3dd68c;
+      --emerald-dim:rgba(61,214,140,.10);
+      --red:        #ff6b6b;
+      --red-dim:    rgba(255,107,107,.10);
+      --violet:     #a78bfa;
+      --border:     #1e3045;
+      --border2:    #162535;
+      --text:       #f0f6ff;
+      --text-sub:   #8ab0cc;
+      --text-dim:   #4a7a9a;
+      --label:      #4a9bbf;
+      --f-ui:  'Syne', sans-serif;
+      --f-mono:'IBM Plex Mono', monospace;
+      --f-num: 'Syne', sans-serif;
+      --topbar-h: 58px;
+      --r-lg: 12px;
+      --r-sm:  7px;
+      --r-xs:  5px;
+      --shadow:    0 4px 18px rgba(0,0,0,.55), 0 2px 5px rgba(0,0,0,.35);
+      --shadow-lg: 0 8px 28px rgba(0,0,0,.65), 0 3px 8px rgba(0,0,0,.40);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
-
-    body {
-      font-family: var(--ui);
-      background: var(--bg);
-      color: var(--text);
-      -webkit-font-smoothing: antialiased;
-      overflow: hidden;
-    }
-
-    /* Atmosphere */
-    body::before {
-      content: '';
-      position: fixed; inset: 0; pointer-events: none; z-index: 0;
-      background:
-        radial-gradient(ellipse 160% 80% at 68% -12%, rgba(0,80,200,.08) 0%, transparent 52%),
-        radial-gradient(ellipse 80% 70% at -4% 65%,   rgba(0,229,180,.05) 0%, transparent 48%),
-        radial-gradient(ellipse 60% 60% at 50% 110%,  rgba(0,50,110,.08)  0%, transparent 58%);
-    }
-
-    /* Grid overlay */
-    body::after {
-      content: '';
-      position: fixed; inset: 0; pointer-events: none; z-index: 0;
-      background-image:
-        linear-gradient(rgba(0,229,180,.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,229,180,.03) 1px, transparent 1px);
-      background-size: 44px 44px;
-    }
+    body { font-family: var(--f-mono); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; overflow: hidden; }
 
     /* ── SHELL ── */
     #shell {
-      position: relative; z-index: 1;
       display: grid;
-      grid-template-columns: var(--sidebar-w) 1fr;
       grid-template-rows: var(--topbar-h) 1fr;
       height: 100vh;
     }
 
     /* ── TOPBAR ── */
     #topbar {
-      grid-column: 1 / -1;
-      display: flex; align-items: center; gap: .9rem;
-      padding: 0 1.25rem;
-      background: rgba(2,5,16,.96);
-      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 0;
+      padding: 0 1.1rem;
+      background: var(--card2);
+      border-bottom: 2px solid var(--border);
+      border-radius: 0 0 18px 18px;
       position: relative; z-index: 10;
-      backdrop-filter: blur(32px);
-      -webkit-backdrop-filter: blur(32px);
-    }
-    #topbar::after {
-      content: '';
-      position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, var(--c) 30%, rgba(0,120,255,.55) 70%, transparent);
-      opacity: .32;
+      box-shadow: 0 4px 18px rgba(0,0,0,.45), 0 2px 0 rgba(0,198,255,.10);
     }
 
-    .brand { display: flex; align-items: center; gap: .65rem; text-decoration: none; flex-shrink: 0; }
+    .brand { display: flex; align-items: center; gap: .65rem; flex-shrink: 0; margin-right: 1rem; }
     .brand-icon {
-      width: 32px; height: 32px;
-      background: rgba(0,229,180,.1); border: 1px solid rgba(0,229,180,.3);
-      border-radius: 8px; display: flex; align-items: center; justify-content: center;
-      font-size: .9rem; color: var(--c);
-      box-shadow: 0 0 16px rgba(0,229,180,.13), inset 0 1px 0 rgba(0,229,180,.12);
+      width: 34px; height: 34px;
+      background: var(--accent-dim); border: 1px solid rgba(0,198,255,.40);
+      border-radius: var(--r-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .95rem; color: var(--accent);
     }
-    .brand-name {
-      font-family: var(--ui); font-weight: 700; font-size: 1.2rem;
-      letter-spacing: .14em; text-transform: uppercase; color: var(--text); line-height: 1;
+    .brand-text { display: flex; flex-direction: column; gap: 1px; }
+    .brand-name { font-family: var(--f-ui); font-weight: 700; font-size: .95rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text); line-height: 1; }
+    .brand-sub  { font-family: var(--f-mono); font-size: .58rem; color: var(--text-sub); letter-spacing: .06em; }
+
+    .topbar-div { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; margin: 0 .85rem; }
+
+    /* ── HEADER TABS ── */
+    .header-tabs { display: flex; align-items: center; gap: .22rem; flex-shrink: 0; }
+    .htab {
+      display: inline-flex; align-items: center; gap: .38rem;
+      font-family: var(--f-ui); font-size: .80rem; font-weight: 700;
+      letter-spacing: .06em; text-transform: uppercase;
+      padding: .38rem .82rem;
+      border-radius: var(--r-sm);
+      border: 1px solid transparent;
+      color: var(--text-dim);
+      cursor: pointer; transition: all .16s;
+      white-space: nowrap;
     }
-    .brand-sub {
-      font-family: var(--mono); font-size: .48rem; color: rgba(0,229,180,.5);
-      letter-spacing: .16em; text-transform: uppercase; margin-top: 3px;
+    .htab i { font-size: .80rem; }
+    .htab:hover { background: var(--accent-dim); color: var(--text-sub); border-color: rgba(0,198,255,.20); }
+    .htab.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-color: rgba(0,198,255,.40);
+      border-bottom-color: var(--accent);
     }
 
-    .topbar-sep { width: 1px; height: 22px; background: rgba(0,229,180,.09); margin: 0 .15rem; }
-
-    .topbar-chips { display: flex; align-items: center; gap: .38rem; margin-left: auto; }
+    /* ── STATUS CHIPS ── */
+    .topbar-chips { display: flex; align-items: center; gap: .35rem; margin-left: auto; }
     .chip {
-      display: inline-flex; align-items: center; gap: .3rem;
-      font-family: var(--mono); font-size: .58rem; color: var(--text-sub);
-      background: rgba(0,229,180,.03); border: 1px solid var(--border2);
-      border-radius: 5px; padding: .24rem .65rem; white-space: nowrap; letter-spacing: .04em;
-      transition: all .15s;
+      display: inline-flex; align-items: center; gap: .32rem;
+      font-family: var(--f-mono); font-size: .72rem; font-weight: 500;
+      color: var(--text-sub); background: var(--card3);
+      border: 1px solid var(--border); border-radius: var(--r-xs);
+      padding: .26rem .68rem; white-space: nowrap; transition: all .15s;
     }
-    .chip i { font-size: .62rem; color: var(--c); }
-    .chip:hover { border-color: var(--border); color: var(--text); }
+    .chip i { font-size: .72rem; color: var(--accent); }
+    .chip:hover { border-color: rgba(0,198,255,.35); color: var(--text); }
 
     .live-pill {
-      display: inline-flex; align-items: center; gap: .38rem;
-      background: rgba(0,229,180,.06); border: 1px solid rgba(0,229,180,.22);
-      border-radius: 5px; padding: .24rem .78rem;
-      font-family: var(--mono); font-size: .58rem; color: var(--c); letter-spacing: .18em;
+      display: inline-flex; align-items: center; gap: .40rem;
+      background: var(--accent-dim); border: 1px solid rgba(0,198,255,.45);
+      border-radius: 20px; padding: .24rem .82rem;
+      font-family: var(--f-ui); font-size: .70rem; font-weight: 700;
+      color: var(--accent); letter-spacing: .12em; text-transform: uppercase;
     }
-    .live-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: var(--c); box-shadow: 0 0 9px var(--c);
-      animation: blink 2s ease-in-out infinite;
-    }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+    .live-ring { position: relative; width: 8px; height: 8px; flex-shrink: 0; }
+    .live-ring::before, .live-ring::after { content: ''; position: absolute; inset: 0; border-radius: 50%; }
+    .live-ring::before { background: var(--accent); animation: liveCore 2s ease-in-out infinite; }
+    .live-ring::after  { inset: -4px; border: 1.5px solid var(--accent); animation: liveRing 2s ease-in-out infinite; opacity: 0; }
+    @keyframes liveCore { 0%,100%{opacity:1;} 50%{opacity:.18;} }
+    @keyframes liveRing { 0%{transform:scale(.5);opacity:.9;} 100%{transform:scale(2.2);opacity:0;} }
 
-    /* ── SIDEBAR ── */
-    #sidebar {
-      background: rgba(2,5,16,.92);
-      border-right: 1px solid var(--border);
-      backdrop-filter: blur(32px);
-      -webkit-backdrop-filter: blur(32px);
-      display: flex; flex-direction: column;
-      padding: .85rem .6rem; gap: .08rem;
-      position: relative; z-index: 5;
-      overflow: hidden;
-    }
-    #sidebar::after {
-      content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 1px;
-      background: linear-gradient(180deg, transparent, rgba(0,229,180,.28) 42%, rgba(0,120,255,.22) 68%, transparent);
-      opacity: .22;
-    }
-
-    .nav-section-label {
-      font-family: var(--ui); font-size: .65rem; font-weight: 700; letter-spacing: .24em;
-      text-transform: uppercase; color: var(--text-dim);
-      padding: .55rem .75rem .25rem; margin-top: .28rem;
-    }
-    .nav-item {
-      display: flex; align-items: center; gap: .55rem;
-      padding: .6rem .78rem; border-radius: 7px;
-      font-family: var(--ui); font-size: .9rem; font-weight: 600;
-      letter-spacing: .05em; color: var(--text-sub);
-      cursor: pointer; border: 1px solid transparent;
-      transition: all .18s; position: relative;
-    }
-    .nav-icon {
-      width: 26px; height: 26px; border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(255,255,255,.03); border: 1px solid rgba(0,229,180,.06);
-      font-size: .78rem; flex-shrink: 0; transition: all .18s; color: var(--text-dim);
-    }
-    .nav-item:hover { background: var(--c-dim); color: var(--text); border-color: var(--border2); }
-    .nav-item:hover .nav-icon { background: var(--c-dim); border-color: var(--border); color: var(--c); }
-    .nav-item.active { background: var(--c-dim); color: var(--c); border-color: var(--border); }
-    .nav-item.active .nav-icon { background: rgba(0,229,180,.1); border-color: rgba(0,229,180,.3); color: var(--c); }
-    .nav-item.active::before {
-      content: '';
-      position: absolute; left: -.6rem; top: 18%; bottom: 18%;
-      width: 3px; background: var(--c); border-radius: 0 3px 3px 0;
-      box-shadow: 0 0 10px var(--c);
-    }
-
-    .sidebar-footer {
-      margin-top: auto; padding: .7rem .55rem;
-      border-top: 1px solid rgba(0,229,180,.06);
-    }
-    .sidebar-footer-text {
-      font-family: var(--ui); font-size: .68rem; font-weight: 500;
-      color: var(--text-dim); letter-spacing: .06em; text-align: center;
-    }
-    .sidebar-version {
-      display: inline-flex; align-items: center; gap: .22rem;
-      background: rgba(0,229,180,.05); border: 1px solid rgba(0,229,180,.1);
-      border-radius: 4px; padding: .16rem .5rem; margin-top: .35rem;
-      font-family: var(--mono); font-size: .48rem; color: rgba(0,229,180,.6); letter-spacing: .06em;
-    }
-
-    /* ── MOBILE TABS ── */
-    #mobile-tabs {
-      display: none;
-      background: rgba(2,5,16,.96);
-      border-bottom: 1px solid var(--border);
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
-      position: relative; z-index: 9;
-    }
-    .mob-tabs-inner { display: flex; align-items: stretch; }
-    .mob-tab {
-      flex: 1; display: flex; flex-direction: column; align-items: center;
-      justify-content: center; gap: .15rem;
-      padding: .5rem .3rem;
-      font-family: var(--ui); font-size: .7rem; font-weight: 700;
-      color: var(--text-dim); cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: all .18s; letter-spacing: .08em; text-transform: uppercase;
-    }
-    .mob-tab i { font-size: .88rem; }
-    .mob-tab:hover { color: var(--text); background: var(--c-dim); }
-    .mob-tab.active { color: var(--c); border-bottom-color: var(--c); background: var(--c-dim); }
-
-    /* ── CONTENT AREA ── */
-    #content {
-      position: relative;
-      overflow: hidden;
-      /* height = 1fr from grid */
-    }
-
-    .tab-pane { display: none; animation: fadein .22s ease; }
+    /* ── CONTENT ── */
+    #content { position: relative; overflow: hidden; background: var(--bg); }
+    .tab-pane { display: none; animation: fadein .20s ease; }
     .tab-pane.active { display: block; }
-    @keyframes fadein { from{opacity:0;transform:translateY(6px);} to{opacity:1;transform:translateY(0);} }
+    @keyframes fadein { from{opacity:0;transform:translateY(5px);} to{opacity:1;transform:translateY(0);} }
 
-    /* Non-USV tabs: internal scroll */
     #navigation.tab-pane.active,
     #sensors.tab-pane.active,
-    #nanoplastic.tab-pane.active {
-      overflow-y: auto;
-      padding: 1.1rem;
-      height: 100%;
-    }
+    #nanoplastic.tab-pane.active { overflow-y: auto; padding: 1.2rem; height: 100%; }
     #navigation.tab-pane.active::-webkit-scrollbar,
     #sensors.tab-pane.active::-webkit-scrollbar,
     #nanoplastic.tab-pane.active::-webkit-scrollbar { width: 3px; }
     #navigation.tab-pane.active::-webkit-scrollbar-thumb,
     #sensors.tab-pane.active::-webkit-scrollbar-thumb,
-    #nanoplastic.tab-pane.active::-webkit-scrollbar-thumb { background: rgba(0,229,180,.14); border-radius: 4px; }
+    #nanoplastic.tab-pane.active::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-    /* ── USV TAB: FULL MAP ── */
-    #usv.tab-pane {
-      position: absolute;
-      inset: 0;
-      overflow: hidden;
-    }
+    #usv.tab-pane { position: absolute; inset: 0; overflow: hidden; }
     #usv.tab-pane.active { display: block; }
+    #map { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
 
-    #map {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-    }
-
-    /* Overlay container (pointer-events: none so map clicks pass through) */
-    .map-overlays {
-      position: absolute;
-      inset: 0;
-      z-index: 500;
-      pointer-events: none;
-    }
-
-    /* Each overlay widget restores pointer events */
-    .ov {
-      position: absolute;
-      pointer-events: auto;
-      max-height: calc(100% - 1.6rem);
-      overflow-y: auto;
-    }
-    .ov::-webkit-scrollbar { width: 2px; }
-    .ov::-webkit-scrollbar-thumb { background: rgba(0,229,180,.18); border-radius: 4px; }
-
+    /* ── MAP OVERLAYS ── */
+    .map-overlays { position: absolute; inset: 0; z-index: 500; pointer-events: none; }
+    .ov { position: absolute; pointer-events: auto; }
     .ov-tl { top: .75rem; left: .75rem; }
-    .ov-tr { top: .75rem; right: .75rem; width: 218px; }
-    .ov-bl { bottom: .75rem; left: .75rem; width: 228px; }
-    .ov-br { bottom: .75rem; right: .75rem; width: 218px; }
 
-    /* Map click hint */
-    .map-hint-chip {
-      position: absolute;
-      bottom: .75rem; left: 50%; transform: translateX(-50%);
+    .ov-compass {
+      position: absolute; top: .75rem; right: .75rem;
+      width: 252px;
+      pointer-events: auto;
+    }
+
+    /* ── Controls — widened with more breathing room ── */
+    .ov-ctrl {
+      position: absolute; bottom: 2.6rem; right: .75rem;
+      width: 460px;
+      pointer-events: auto;
+    }
+
+    .map-hint {
+      position: absolute; bottom: .75rem; left: 50%; transform: translateX(-50%);
       z-index: 500; pointer-events: none;
-      font-family: var(--mono); font-size: .54rem; color: var(--text-dim); letter-spacing: .06em;
-      background: rgba(2,6,18,.78); border: 1px solid var(--border2);
-      border-radius: 20px; padding: .22rem .9rem;
-      display: flex; align-items: center; gap: .28rem;
-      backdrop-filter: blur(14px); white-space: nowrap;
+      font-family: var(--f-mono); font-size: .74rem; color: var(--text-sub);
+      background: var(--card2); border: 1px solid var(--border); border-radius: 20px;
+      padding: .26rem 1rem;
+      display: flex; align-items: center; gap: .30rem;
+      box-shadow: var(--shadow); white-space: nowrap;
     }
-    .map-hint-chip i { color: var(--c); font-size: .58rem; }
+    .map-hint i { color: var(--accent); font-size: .76rem; }
 
-    /* ── GLASS PANELS ── */
+    /* ── PANELS ── */
     .panel {
-      background: var(--glass);
-      border: 1px solid var(--border);
-      border-radius: 11px;
-      overflow: hidden;
-      backdrop-filter: blur(32px);
-      -webkit-backdrop-filter: blur(32px);
-      box-shadow: 0 8px 40px rgba(0,0,0,.55), inset 0 1px 0 rgba(0,229,180,.05);
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--r-lg); overflow: hidden;
+      box-shadow: var(--shadow);
     }
-
-    /* Overlay panel — stronger glass for map legibility */
     .panel-ov {
-      background: var(--glass-ov);
-      border: 1px solid rgba(0,229,180,.15);
-      border-radius: 10px;
-      overflow: hidden;
-      backdrop-filter: blur(40px);
-      -webkit-backdrop-filter: blur(40px);
-      box-shadow: 0 12px 48px rgba(0,0,0,.72), inset 0 1px 0 rgba(0,229,180,.07);
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--r-lg); overflow: hidden;
+      box-shadow: none;
     }
-
     .panel-head {
       display: flex; align-items: center; justify-content: space-between;
-      padding: .52rem .88rem; background: rgba(0,229,180,.025);
-      border-bottom: 1px solid var(--border2); gap: .42rem; flex-wrap: wrap;
+      padding: .55rem .90rem;
+      background: var(--card2); border-bottom: 1px solid var(--border);
+      gap: .40rem;
     }
     .panel-title {
-      display: flex; align-items: center; gap: .42rem;
-      font-family: var(--ui); font-size: .75rem; font-weight: 700;
-      letter-spacing: .15em; text-transform: uppercase; color: rgba(0,229,180,.65);
+      display: flex; align-items: center; gap: .40rem;
+      font-family: var(--f-ui); font-size: .78rem; font-weight: 700;
+      letter-spacing: .06em; text-transform: uppercase; color: var(--accent);
     }
-    .panel-title i { color: var(--c); font-size: .78rem; }
-    .panel-dot {
-      width: 4px; height: 4px; border-radius: 50%;
-      background: var(--c); box-shadow: 0 0 7px var(--c); flex-shrink: 0;
-    }
+    .panel-title i { font-size: .82rem; }
+    .panel-pip { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
     .panel-body { padding: .85rem; }
 
     /* ── METRICS ── */
-    .metric-grid   { display: grid; grid-template-columns: repeat(2,1fr); gap: .38rem; }
-    .metric-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: .38rem; }
-    .metric-grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: .42rem; }
+    .metric-grid   { display: grid; grid-template-columns: repeat(2,1fr); gap: .40rem; }
+    .metric-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: .40rem; }
+    .metric-grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: .40rem; }
 
     .metric {
-      background: rgba(0,229,180,.025);
-      border: 1px solid var(--border2);
-      border-radius: 7px; padding: .55rem .7rem;
-      transition: background .15s, border-color .15s;
-      position: relative; overflow: hidden;
+      background: var(--card3); border: 1px solid var(--border);
+      border-left: 2px solid var(--accent);
+      border-radius: var(--r-sm); padding: .58rem .72rem; transition: all .18s;
     }
-    .metric::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(0,229,180,.12), transparent);
-    }
-    .metric:hover { background: rgba(0,229,180,.045); border-color: rgba(0,229,180,.15); }
+    .metric:hover { background: rgba(0,198,255,.08); }
     .metric.span2 { grid-column: 1 / -1; }
-
-    .metric-lbl {
-      font-family: var(--ui); font-size: .68rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .1em;
-      color: var(--text-dim); margin-bottom: .2rem;
-    }
-    .metric-val {
-      font-family: var(--mono); font-size: 1rem;
-      color: var(--text); line-height: 1.2; font-weight: 500;
-    }
-    .metric-val.sm { font-size: .78rem; }
-    .metric-val.hi { color: var(--c); }
+    .metric-lbl { font-family: var(--f-mono); font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-sub); margin-bottom: .22rem; }
+    .metric-val { font-family: var(--f-mono); font-size: .98rem; font-weight: 600; color: var(--text); line-height: 1.3; }
+    .metric-val.sm   { font-size: .86rem; }
+    .metric-val.hi   { color: var(--accent); }
     .metric-val.warn { color: var(--amber); }
-    .metric-val.err { color: var(--red); }
+    .metric-val.err  { color: var(--red); }
 
     .section-label {
-      font-family: var(--ui); font-size: .68rem; font-weight: 700;
-      letter-spacing: .2em; text-transform: uppercase;
-      color: rgba(0,229,180,.48); margin-bottom: .42rem;
-      display: flex; align-items: center; gap: .35rem;
+      font-family: var(--f-ui); font-size: .70rem; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--label);
+      margin-bottom: .44rem; display: flex; align-items: center; gap: .36rem;
     }
-    .section-label::after { content: ''; flex: 1; height: 1px; background: rgba(0,229,180,.07); }
+    .section-label span { opacity: .6; font-size: .63rem; }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
     /* ── BUTTONS ── */
     .btn {
       display: inline-flex; align-items: center; justify-content: center; gap: .32rem;
-      font-family: var(--ui); font-size: .82rem; font-weight: 700;
-      padding: .48rem 1rem; border-radius: 6px;
-      border: 1px solid var(--border2); background: rgba(0,229,180,.03); color: var(--text-sub);
-      cursor: pointer; transition: all .15s; text-transform: uppercase;
-      letter-spacing: .1em; white-space: nowrap;
+      font-family: var(--f-ui); font-size: .80rem; font-weight: 700;
+      padding: .48rem .95rem; border-radius: var(--r-sm);
+      border: 1px solid var(--border); background: var(--card3); color: var(--text-sub);
+      cursor: pointer; transition: all .16s;
+      letter-spacing: .04em; white-space: nowrap; line-height: 1;
     }
-    .btn:hover { background: rgba(0,229,180,.07); color: var(--text); border-color: var(--border); transform: translateY(-1px); }
+    .btn:hover { background: rgba(255,255,255,.07); color: var(--text); border-color: rgba(255,255,255,.22); transform: translateY(-1px); }
     .btn:active { transform: translateY(0); }
+    .btn-jade    { background: var(--accent-dim); border-color: rgba(0,198,255,.50); color: var(--accent); }
+    .btn-jade:hover { background: rgba(0,198,255,.20); border-color: rgba(0,198,255,.70); }
+    .btn-rose    { background: var(--red-dim);     border-color: rgba(255,107,107,.38); color: var(--red); }
+    .btn-rose:hover { background: rgba(255,107,107,.18); }
+    .btn-amber   { background: var(--amber-dim);   border-color: rgba(245,200,66,.38);  color: var(--amber); }
+    .btn-amber:hover { background: rgba(245,200,66,.18); }
+    .btn-emerald { background: var(--emerald-dim); border-color: rgba(61,214,140,.35);  color: var(--emerald); }
+    .btn-emerald:hover { background: rgba(61,214,140,.18); }
+    .btn-sm { padding: .28rem .60rem; font-size: .72rem; border-radius: var(--r-xs); }
+    .btn:disabled { opacity: .30; pointer-events: none; }
 
-    .btn-teal {
-      background: rgba(0,229,180,.09); border-color: rgba(0,229,180,.3); color: var(--c);
-      box-shadow: 0 2px 12px rgba(0,229,180,.08), inset 0 1px 0 rgba(0,229,180,.06);
+    /* Capture button */
+    .btn-capture {
+      font-size: .92rem; font-weight: 800;
+      padding: .68rem 2rem;
+      border-radius: var(--r-sm);
+      gap: .50rem;
+      letter-spacing: .06em;
+      background: linear-gradient(135deg, rgba(0,198,255,.18) 0%, rgba(0,198,255,.08) 100%);
+      border: 1.5px solid rgba(0,198,255,.55);
+      color: var(--accent);
+      box-shadow: 0 0 18px rgba(0,198,255,.10), inset 0 1px 0 rgba(0,198,255,.15);
+      transition: all .20s;
     }
-    .btn-teal:hover { background: rgba(0,229,180,.15); border-color: rgba(0,229,180,.5); }
-
-    .btn-rose { background: var(--red-dim); border-color: rgba(255,53,85,.25); color: var(--red); }
-    .btn-rose:hover { background: rgba(255,53,85,.13); border-color: rgba(255,53,85,.45); }
-
-    .btn-amber { background: var(--amber-dim); border-color: rgba(255,182,39,.25); color: var(--amber); }
-    .btn-amber:hover { background: rgba(255,182,39,.13); border-color: rgba(255,182,39,.45); }
-
-    .btn-emerald { background: var(--green-dim); border-color: rgba(42,252,106,.25); color: var(--green); }
-    .btn-emerald:hover { background: rgba(42,252,106,.13); border-color: rgba(42,252,106,.45); }
-
-    .btn-sm { padding: .26rem .6rem; font-size: .68rem; border-radius: 5px; }
-    .btn:disabled { opacity: .3; pointer-events: none; }
+    .btn-capture:hover {
+      background: linear-gradient(135deg, rgba(0,198,255,.28) 0%, rgba(0,198,255,.14) 100%);
+      border-color: rgba(0,198,255,.80);
+      box-shadow: 0 0 28px rgba(0,198,255,.20), inset 0 1px 0 rgba(0,198,255,.25);
+      transform: translateY(-2px);
+    }
+    .btn-capture i { font-size: .92rem; }
 
     /* ── TOGGLE ── */
-    .toggle { position: relative; width: 38px; height: 20px; flex-shrink: 0; }
+    .toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
     .toggle input { opacity: 0; width: 0; height: 0; }
-    .tgl-track {
-      position: absolute; inset: 0;
-      background: rgba(0,229,180,.04); border-radius: 20px;
-      cursor: pointer; transition: all .2s; border: 1px solid var(--border2);
-    }
-    .tgl-track::before {
-      content: ''; position: absolute; width: 14px; height: 14px;
-      left: 2px; top: 2px; background: var(--text-dim); border-radius: 50%;
-      transition: .2s cubic-bezier(.4,0,.2,1);
-    }
-    input:checked + .tgl-track { background: rgba(0,229,180,.14); border-color: rgba(0,229,180,.4); }
-    input:checked + .tgl-track::before { transform: translateX(18px); background: var(--c); box-shadow: 0 0 8px rgba(0,229,180,.5); }
+    .tgl-track { position: absolute; inset: 0; background: var(--card3); border-radius: 20px; cursor: pointer; transition: all .20s; border: 1px solid var(--border); }
+    .tgl-track::before { content: ''; position: absolute; width: 13px; height: 13px; left: 3px; top: 3px; background: var(--text-dim); border-radius: 50%; transition: .20s; }
+    input:checked + .tgl-track { background: rgba(0,198,255,.18); border-color: rgba(0,198,255,.55); }
+    input:checked + .tgl-track::before { transform: translateX(16px); background: var(--accent); }
 
     /* ── RANGE ── */
-    input[type=range] {
-      -webkit-appearance: none; width: 100%; height: 3px;
-      background: rgba(0,229,180,.09); border-radius: 5px; outline: none;
-    }
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none; width: 14px; height: 14px;
-      background: var(--c); border-radius: 50%;
-      box-shadow: 0 0 10px rgba(0,229,180,.5); cursor: pointer;
-      border: 1px solid rgba(0,229,180,.4);
-    }
-    input[type=range]::-moz-range-thumb {
-      width: 14px; height: 14px; background: var(--c); border-radius: 50%;
-      box-shadow: 0 0 10px rgba(0,229,180,.5); cursor: pointer; border: none;
-    }
+    input[type=range] { -webkit-appearance: none; width: 100%; height: 3px; background: var(--border); border-radius: 5px; outline: none; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; cursor: pointer; border: 2px solid rgba(0,198,255,.50); }
+    input[type=range]::-moz-range-thumb { width: 14px; height: 14px; background: var(--accent); border-radius: 50%; cursor: pointer; border: none; }
 
-    /* ── BADGE ── */
-    .badge {
-      font-family: var(--ui); font-size: .65rem; font-weight: 700;
-      padding: .14rem .48rem; border-radius: 4px; border: 1px solid;
-      display: inline-block; letter-spacing: .1em; text-transform: uppercase;
-    }
-    .badge-high   { color: var(--red);   border-color: rgba(255,53,85,.3);   background: var(--red-dim); }
-    .badge-medium { color: var(--amber); border-color: rgba(255,182,39,.3);  background: var(--amber-dim); }
-    .badge-low    { color: var(--green); border-color: rgba(42,252,106,.3);  background: var(--green-dim); }
+    /* ── BADGES ── */
+    .badge { font-family: var(--f-mono); font-size: .68rem; font-weight: 700; padding: .14rem .48rem; border-radius: var(--r-xs); border: 1px solid; display: inline-block; letter-spacing: .05em; text-transform: uppercase; }
+    .badge-high   { color: var(--red);     border-color: rgba(255,107,107,.40); background: var(--red-dim); }
+    .badge-medium { color: var(--amber);   border-color: rgba(245,200,66,.38);  background: var(--amber-dim); }
+    .badge-low    { color: var(--emerald); border-color: rgba(61,214,140,.38);  background: var(--emerald-dim); }
 
     /* ── TABLE ── */
     .data-table { width: 100%; border-collapse: collapse; }
-    .data-table thead tr { background: rgba(0,229,180,.025); border-bottom: 1px solid var(--border2); }
-    .data-table th {
-      font-family: var(--ui); font-size: .68rem; font-weight: 700; letter-spacing: .14em;
-      text-transform: uppercase; color: rgba(0,229,180,.5); padding: .55rem .85rem;
-      text-align: left; white-space: nowrap;
-    }
-    .data-table td {
-      font-family: var(--mono); font-size: .68rem; font-weight: 400; color: var(--text);
-      padding: .45rem .85rem; border-bottom: 1px solid rgba(0,229,180,.032);
-    }
-    .data-table tbody tr { transition: background .12s; }
-    .data-table tbody tr:hover td { background: rgba(0,229,180,.028); }
-    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .data-table thead tr { background: var(--card2); border-bottom: 1px solid var(--border); }
+    .data-table th { font-family: var(--f-ui); font-size: .70rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); padding: .56rem .88rem; text-align: left; white-space: nowrap; }
+    .data-table td { font-family: var(--f-mono); font-size: .74rem; color: var(--text); padding: .48rem .88rem; border-bottom: 1px solid var(--border2); }
+    .data-table tbody tr:hover td { background: var(--accent-dim); }
+    .table-wrap { overflow-x: auto; }
 
     /* ── STAT CARDS ── */
-    .stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: .6rem; margin-bottom: 1rem; }
+    .stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: .60rem; margin-bottom: 1rem; }
     .stat-card {
-      background: var(--glass); border: 1px solid var(--border); border-radius: 10px;
-      padding: .85rem .8rem; text-align: center;
-      backdrop-filter: blur(28px);
-      transition: all .2s; position: relative; overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0,0,0,.35);
+      background: var(--card); border: 1px solid var(--border); border-top: 2px solid rgba(0,198,255,.45);
+      border-radius: var(--r-lg); padding: .9rem; text-align: center;
+      box-shadow: var(--shadow); transition: all .20s;
     }
-    .stat-card::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(0,229,180,.22), transparent);
-    }
-    .stat-card:hover { transform: translateY(-2px); border-color: rgba(0,229,180,.18); }
-    .stat-num { font-family: var(--mono); font-size: 1.7rem; font-weight: 700; color: var(--text); line-height: 1.2; }
-    .stat-sub { font-family: var(--ui); font-size: .65rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--text-dim); margin-bottom: .28rem; }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-top-color: var(--accent); }
+    .stat-num { font-family: var(--f-num); font-size: 2rem; font-weight: 800; color: var(--text); line-height: 1.15; }
+    .stat-sub { font-family: var(--f-ui); font-size: .70rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-sub); margin-bottom: .28rem; }
 
     /* ── MISC ── */
-    .divider { border: none; border-top: 1px solid rgba(0,229,180,.06); margin: .52rem 0; }
-    .row-label { font-family: var(--ui); font-size: .8rem; font-weight: 600; color: var(--text-sub); display: flex; align-items: center; gap: .32rem; }
-    .row-label i { color: var(--text-dim); font-size: .72rem; }
-    .row-val { font-family: var(--mono); font-size: .72rem; font-weight: 500; color: var(--c); }
-    .override-chip {
-      font-family: var(--mono); font-size: .54rem; font-weight: 500;
-      background: rgba(0,229,180,.03); border: 1px solid var(--border2);
-      border-radius: 4px; padding: .18rem .55rem; color: var(--text-dim); letter-spacing: .06em;
-    }
-    .sub-panel {
-      background: rgba(0,229,180,.02); border: 1px solid var(--border2);
-      border-radius: 7px; padding: .62rem;
-    }
-    .cap-status {
-      font-family: var(--ui); font-size: .72rem; font-weight: 600;
-      background: rgba(0,229,180,.03); border: 1px solid var(--border2);
-      border-radius: 5px; padding: .25rem .7rem; color: var(--text-sub); letter-spacing: .08em;
-    }
-
-    #noImageMessage {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: .5rem; height: 180px; border: 1px dashed rgba(0,229,180,.1);
-      border-radius: 8px; font-family: var(--ui); font-size: .72rem; font-weight: 600;
-      color: var(--text-dim); letter-spacing: .08em;
-    }
-    #noImageMessage i { font-size: 1.7rem; color: rgba(0,229,180,.18); }
-
-    input[type=number] {
-      width: 100%; padding: .38rem .6rem;
-      background: rgba(0,229,180,.03); border: 1px solid var(--border2);
-      border-radius: 6px; font-family: var(--mono); font-size: .7rem;
-      color: var(--text); outline: none; margin-top: .38rem; transition: border-color .15s;
-    }
-    input[type=number]:focus { border-color: rgba(0,229,180,.36); background: rgba(0,229,180,.04); }
-
+    .divider { border: none; border-top: 1px solid var(--border); margin: .40rem 0; }
+    .row-label { font-family: var(--f-mono); font-size: .78rem; font-weight: 500; color: var(--text-sub); display: flex; align-items: center; gap: .30rem; }
+    .row-label i { color: var(--text-dim); font-size: .76rem; }
+    .row-val { font-family: var(--f-mono); font-size: .76rem; font-weight: 600; color: var(--accent); }
+    .override-chip { font-family: var(--f-mono); font-size: .66rem; font-weight: 500; background: var(--card3); border: 1px solid var(--border); border-radius: var(--r-xs); padding: .16rem .52rem; color: var(--text-sub); }
+    .sub-panel { background: var(--card3); border: 1px solid var(--border); border-radius: var(--r-sm); padding: .55rem .65rem; }
+    .cap-status { font-family: var(--f-mono); font-size: .82rem; font-weight: 600; background: var(--card3); border: 1px solid var(--border); border-radius: var(--r-sm); padding: .28rem .80rem; color: var(--text-sub); letter-spacing: .04em; }
     .scroll-y { overflow-y: auto; }
     .scroll-y::-webkit-scrollbar { width: 3px; }
-    .scroll-y::-webkit-scrollbar-thumb { background: rgba(0,229,180,.12); border-radius: 4px; }
+    .scroll-y::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-    /* ── BEARING INDICATOR ── */
-    .bearing-wrap {
-      background: rgba(0,229,180,.02); border: 1px solid var(--border2);
-      border-radius: 7px; padding: .65rem;
+    /* ── 16:9 image container ── */
+    .image-16-9 {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: var(--card3);
+      border-radius: var(--r-sm);
+      overflow: hidden;
+      border: 1px solid var(--border);
     }
-    .bearing-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: .42rem; }
-    .bearing-lbl { font-family: var(--ui); font-size: .75rem; font-weight: 600; color: var(--text-sub); letter-spacing: .05em; }
-    #bearingRel { font-family: var(--mono); font-size: .9rem; font-weight: 500; color: var(--amber); }
-    .bearing-track {
-      position: relative; height: 5px;
-      background: rgba(0,229,180,.04); border-radius: 5px;
-      border: 1px solid var(--border2); overflow: visible;
+    .image-16-9 img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: none;
     }
-    .bearing-track-fill {
-      position: absolute; inset: 0; border-radius: 5px;
-      background: linear-gradient(90deg,
-        rgba(255,53,85,.22) 0%, rgba(0,229,180,.04) 35%,
-        rgba(0,229,180,.12) 50%, rgba(0,229,180,.04) 65%,
-        rgba(255,53,85,.22) 100%
-      );
+    .image-16-9 .no-image-msg {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: .50rem;
+      font-family: var(--f-mono); font-size: .78rem;
+      color: var(--text-dim);
+      border: 1px dashed rgba(0,198,255,.22);
+      border-radius: var(--r-sm);
     }
-    .bearing-cursor {
-      position: absolute; top: -7px;
-      width: 0; height: 0;
-      border-left: 5px solid transparent; border-right: 5px solid transparent;
-      border-bottom: 10px solid var(--amber); transform: translateX(-50%);
-      filter: drop-shadow(0 0 5px rgba(255,182,39,.75));
-      transition: left .35s cubic-bezier(.4,0,.2,1);
+    .image-16-9 .no-image-msg i { font-size: 2rem; color: rgba(0,198,255,.30); }
+
+    input[type=number] {
+      width: 100%; padding: .36rem .60rem;
+      background: var(--card3); border: 1px solid var(--border);
+      border-radius: var(--r-xs); font-family: var(--f-mono); font-size: .74rem;
+      color: var(--text); outline: none; margin-top: .30rem; transition: border-color .18s;
     }
-    .bearing-labels {
-      display: flex; justify-content: space-between;
-      font-family: var(--ui); font-size: .62rem; font-weight: 600; color: var(--text-dim); margin-top: .38rem;
-      letter-spacing: .06em;
+    input[type=number]:focus { border-color: rgba(0,198,255,.55); background: var(--accent-dim); }
+
+    /* ── COMPASS ── */
+    .compass-wrap { display: flex; flex-direction: column; align-items: center; gap: .44rem; padding: .60rem .72rem; }
+    .compass-sublabel { font-family: var(--f-ui); font-size: .66rem; font-weight: 700; color: var(--text-dim); align-self: flex-start; letter-spacing: .08em; text-transform: uppercase; }
+    .heading-tape { width: 100%; background: var(--card3); border: 1px solid var(--border); border-radius: var(--r-sm); padding: .42rem .68rem; display: flex; align-items: center; justify-content: space-between; }
+    .tape-lbl { font-family: var(--f-ui); font-size: .62rem; font-weight: 700; color: var(--text-sub); margin-bottom: 2px; letter-spacing: .08em; text-transform: uppercase; }
+    .tape-val { font-family: var(--f-mono); font-size: 1rem; font-weight: 600; color: var(--accent); letter-spacing: .04em; line-height: 1; }
+    .brng-tape { width: 100%; background: var(--card3); border: 1px solid var(--border); border-radius: var(--r-sm); padding: .40rem .65rem; }
+    .brng-track { height: 3px; background: var(--border); border-radius: 4px; position: relative; margin: .22rem 0 .34rem; }
+    .brng-row { display: flex; justify-content: space-between; align-items: center; }
+    .brng-lbl { font-family: var(--f-ui); font-size: .62rem; font-weight: 700; color: var(--text-sub); letter-spacing: .06em; }
+    .brng-num { font-family: var(--f-mono); font-size: .80rem; font-weight: 600; color: var(--amber); }
+
+    /* ── CONTROLS — comfortable spacing throughout ── */
+    .ctrl-section { display: flex; flex-direction: column; gap: 1.4rem; }
+    .ctrl-subsec-label {
+      font-family: var(--f-ui); font-size: .74rem; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--label);
+      margin-bottom: .55rem; display: flex; align-items: center; gap: .28rem;
     }
+    .ctrl-subsec-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .ctrl-body { padding: 1.4rem 1.5rem; }
+
+    /* ── BEARING (used by USV compass overlay, keep untouched) ── */
+    .bearing-wrap { background: var(--card3); border: 1px solid var(--border); border-radius: var(--r-sm); padding: .70rem; }
+    .bearing-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: .38rem; }
+    .bearing-lbl { font-family: var(--f-mono); font-size: .76rem; font-weight: 600; color: var(--text-sub); }
+    #bearingRel { font-family: var(--f-mono); font-size: .88rem; font-weight: 600; color: var(--amber); }
+    .bearing-track { position: relative; height: 4px; background: var(--border); border-radius: 5px; overflow: visible; }
+    .bearing-track-fill { position: absolute; inset: 0; border-radius: 5px; background: var(--border); }
+    .bearing-cursor { position: absolute; top: -6px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 9px solid var(--amber); transform: translateX(-50%); transition: left .38s cubic-bezier(.4,0,.2,1); }
+    .bearing-labels { display: flex; justify-content: space-between; font-family: var(--f-ui); font-size: .64rem; font-weight: 700; color: var(--text-dim); margin-top: .38rem; letter-spacing: .06em; }
     #bearingText { color: var(--amber); }
 
-    /* ── COMPASS (Overlay) ── */
-    .compass-wrap {
-      display: flex; flex-direction: column; align-items: center; gap: .5rem;
-      padding: .65rem;
-    }
-    .compass-label {
-      font-family: var(--ui); font-size: .65rem; font-weight: 700; letter-spacing: .18em;
-      text-transform: uppercase; color: rgba(0,229,180,.5);
-      align-self: flex-start;
-      display: flex; align-items: center; gap: .3rem;
-    }
-    .compass-label::before { content: '◆'; font-size: .4rem; color: var(--c); }
-    .heading-tape {
-      width: 100%; background: rgba(0,0,0,.45); border: 1px solid rgba(0,229,180,.09);
-      border-radius: 6px; padding: .45rem .7rem;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .tape-lbl {
-      font-family: var(--ui); font-size: .62rem; font-weight: 700;
-      letter-spacing: .12em; color: rgba(0,229,180,.45); text-transform: uppercase; margin-bottom: 2px;
-    }
-    .tape-val { font-family: var(--mono); font-size: 1.15rem; font-weight: 500; color: var(--c); letter-spacing: .04em; line-height: 1; }
-    .brng-tape {
-      width: 100%; background: rgba(0,0,0,.38); border: 1px solid rgba(0,229,180,.07);
-      border-radius: 6px; padding: .42rem .65rem;
-    }
-    .brng-track { height: 3px; background: rgba(0,229,180,.06); border-radius: 4px; position: relative; margin: .26rem 0 .4rem; }
-    .brng-row { display: flex; justify-content: space-between; align-items: center; }
-    .brng-lbl { font-family: var(--ui); font-size: .58rem; font-weight: 700; letter-spacing: .1em; color: rgba(0,229,180,.32); text-transform: uppercase; }
-    .brng-num { font-family: var(--mono); font-size: .78rem; font-weight: 500; color: var(--amber); }
+    /* ── NODE DOTS ── */
+    .node-dots { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+    .ndot { width: 9px; height: 9px; border-radius: 50%; background: var(--card3); border: 1px solid var(--border); transition: all .22s; }
+    .ndot.done { background: rgba(61,214,140,.25); border-color: var(--emerald); }
+    .ndot.act  { background: var(--accent); border-color: var(--accent); }
 
-    /* Connectivity row */
-    .conn-row { display: grid; grid-template-columns: 1fr 1fr; gap: .38rem; width: 100%; }
-    .conn-cell {
-      background: rgba(0,229,180,.02); border: 1px solid var(--border2);
-      border-radius: 6px; padding: .42rem .58rem;
-    }
-    .conn-cell .metric-lbl { margin-bottom: .18rem; font-size: .6rem; }
-    .conn-cell .metric-val { font-size: .72rem; }
+    /* ── RISK PANEL ── */
+    .risk-panel { border-radius: var(--r-sm); padding: .72rem; background: var(--card3); border-left: 2px solid rgba(167,139,250,.55); border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 
-    /* Node progress dots */
-    .node-dots { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
-    .ndot {
-      width: 9px; height: 9px; border-radius: 50%;
-      background: rgba(0,229,180,.06); border: 1px solid rgba(0,229,180,.1);
-      transition: all .2s;
-    }
-    .ndot.done { background: rgba(42,252,106,.32); border-color: rgba(42,252,106,.55); }
-    .ndot.act  { background: var(--c); border-color: var(--c); box-shadow: 0 0 8px var(--c); }
-
-    /* Risk panel */
-    .risk-panel {
-      border-radius: 8px; padding: .75rem;
-      background: rgba(99,102,241,.04);
-      border-left: 2px solid rgba(99,102,241,.35);
-      border-top: 1px solid rgba(99,102,241,.08);
-      border-right: 1px solid rgba(99,102,241,.04);
-      border-bottom: 1px solid rgba(99,102,241,.04);
-    }
-
-    /* Sensors grid */
+    /* ── LAYOUT ── */
     .sensors-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    /* Nano grid */
-    .nano-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
 
-    /* ════════════════════════
-       RESPONSIVE
-    ════════════════════════ */
-    @media (max-width: 1024px) {
-      :root { --sidebar-w: 192px; }
-      .metric-grid-4 { grid-template-columns: repeat(2,1fr); }
-      .ov-tr { width: 195px; }
-      .ov-bl { width: 205px; }
-      .ov-br { width: 195px; }
+    /* ── Nano analysis layout ── */
+    .nano-analysis-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .85rem;
+      align-items: stretch;
+    }
+    .nano-stats-col {
+      display: flex; flex-direction: column; gap: .38rem;
+    }
+    .nano-stat-item {
+      background: var(--card3); border: 1px solid var(--border);
+      border-left: 2px solid var(--accent);
+      border-radius: var(--r-sm); padding: .62rem .75rem;
+      display: flex; flex-direction: column; gap: .18rem;
+      flex: 1;
     }
 
+    .map-ctrl-pill { display: flex; align-items: center; gap: .32rem; padding: .42rem .65rem; flex-wrap: wrap; }
+
+    /* ── Compact Capture widget ── */
+    .capture-widget-body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.2rem;
+      padding: 1.0rem 1.4rem;
+    }
+    .capture-divider { width: 1px; height: 36px; background: var(--border); flex-shrink: 0; }
+
+    /* ── CTRL mission buttons ── */
+    .ctrl-mission-btn {
+      display: flex; align-items: center; justify-content: center; gap: .45rem;
+      font-family: var(--f-ui); font-size: .90rem; font-weight: 700;
+      letter-spacing: .04em; white-space: nowrap; line-height: 1;
+      padding: .72rem .85rem;
+      border-radius: var(--r-sm);
+      cursor: pointer; transition: all .16s;
+      border: 1px solid var(--border); background: var(--card3); color: var(--text-sub);
+      width: 100%;
+    }
+    .ctrl-mission-btn i { font-size: .92rem; }
+    .ctrl-mission-btn:hover { transform: translateY(-1px); }
+    .ctrl-mission-btn:active { transform: translateY(0); }
+    .ctrl-mission-btn.jade    { background: var(--accent-dim); border-color: rgba(0,198,255,.50); color: var(--accent); }
+    .ctrl-mission-btn.jade:hover  { background: rgba(0,198,255,.20); border-color: rgba(0,198,255,.70); }
+    .ctrl-mission-btn.rose    { background: var(--red-dim);     border-color: rgba(255,107,107,.38); color: var(--red); }
+    .ctrl-mission-btn.rose:hover  { background: rgba(255,107,107,.18); }
+    .ctrl-mission-btn.amber   { background: var(--amber-dim);   border-color: rgba(245,200,66,.38);  color: var(--amber); }
+    .ctrl-mission-btn.amber:hover { background: rgba(245,200,66,.18); }
+
+    /* ── Pump action buttons ── */
+    .pump-btn {
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--f-ui); font-size: .78rem; font-weight: 700;
+      letter-spacing: .04em; padding: .52rem 0;
+      border-radius: var(--r-xs); cursor: pointer; transition: all .16s;
+      border: 1px solid var(--border); background: var(--card3); color: var(--text-sub);
+    }
+    .pump-btn:hover { transform: translateY(-1px); }
+    .pump-btn.emerald { background: var(--emerald-dim); border-color: rgba(61,214,140,.35);  color: var(--emerald); }
+    .pump-btn.amber   { background: var(--amber-dim);   border-color: rgba(245,200,66,.38);  color: var(--amber); }
+    .pump-btn.rose    { background: var(--red-dim);     border-color: rgba(255,107,107,.38); color: var(--red); }
+
+    /* ════════════════════════════════════════
+       NAVIGATION TAB — Sample 1 Clean Grid
+       ════════════════════════════════════════ */
+
+    /* Page header row */
+    .nav-page-row {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: .10rem;
+    }
+    .nav-page-title {
+      font-family: var(--f-ui); font-weight: 700; font-size: 1.10rem; color: var(--text);
+    }
+    .nav-page-tag {
+      font-family: var(--f-mono); font-size: .68rem; color: #4a9bbf;
+      display: flex; align-items: center; gap: .35rem;
+    }
+    .nav-page-tag-dot {
+      width: 5px; height: 5px; border-radius: 50%; background: var(--emerald);
+    }
+
+    /* Section label */
+    .nav-sec {
+      font-family: var(--f-ui); font-weight: 700; font-size: .68rem;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim);
+      margin-bottom: .75rem;
+    }
+
+    /* 3-column top grid */
+    .nav-top-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: .90rem;
+    }
+
+    /* Big number card */
+    .nav-bignum-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 1.10rem 1.25rem;
+      display: flex; flex-direction: column; gap: .20rem;
+      box-shadow: var(--shadow);
+      transition: border-color .18s;
+    }
+    .nav-bignum-card:hover { border-color: rgba(0,198,255,.35); }
+    .nav-bn-label {
+      font-family: var(--f-mono); font-weight: 500; font-size: .70rem;
+      color: var(--text-sub); letter-spacing: .04em;
+    }
+    .nav-bn-value {
+      font-family: var(--f-mono); font-size: 2.10rem; font-weight: 600;
+      line-height: 1; letter-spacing: -.01em;
+    }
+    .nav-bn-sub {
+      font-family: var(--f-ui); font-size: .68rem; color: var(--text-dim); margin-top: .06rem;
+    }
+
+    /* 2-column mid grid */
+    .nav-mid-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: .90rem;
+    }
+
+    /* Detail table rows */
+    .nav-dtable { display: flex; flex-direction: column; }
+    .nav-drow {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .68rem 0; border-bottom: 1px solid var(--border2);
+    }
+    .nav-drow:last-child { border-bottom: none; }
+    .nav-dl {
+      font-family: var(--f-mono); font-size: .78rem; font-weight: 400; color: var(--text-sub);
+    }
+    .nav-dv {
+      font-family: var(--f-mono); font-size: .80rem; font-weight: 600; color: var(--text);
+    }
+
+    /* Bearing indicator panel — re-styled track to show cursor clearly */
+    .nav-bearing-wrap {
+      display: flex; flex-direction: column; gap: .55rem;
+    }
+    .nav-bearing-header {
+      display: flex; justify-content: space-between; align-items: baseline;
+    }
+    .nav-bearing-sub {
+      font-family: var(--f-mono); font-size: .78rem; color: var(--text-sub);
+    }
+    .nav-bearing-val {
+      font-family: var(--f-mono); font-size: .80rem; font-weight: 600; color: var(--amber);
+    }
+    .nav-bearing-track-wrap {
+      padding: .55rem 0 .30rem;
+    }
+    .nav-bearing-labels {
+      display: flex; justify-content: space-between;
+      font-family: var(--f-ui); font-size: .66rem; font-weight: 700;
+      color: var(--text-dim); letter-spacing: .06em; margin-top: .38rem;
+    }
+
+    /* Responsive overrides for nav tab */
+    @media (max-width: 767px) {
+      .nav-top-grid  { grid-template-columns: 1fr 1fr; }
+      .nav-mid-grid  { grid-template-columns: 1fr; }
+      .nav-bn-value  { font-size: 1.60rem; }
+    }
+    @media (max-width: 420px) {
+      .nav-top-grid  { grid-template-columns: 1fr; }
+    }
+
+    /* ── RESPONSIVE (original) ── */
+    @media (max-width: 900px) {
+      .htab span { display: none; }
+      .htab { padding: .38rem .55rem; }
+      .brand-sub { display: none; }
+      .chip.hide-mob { display: none; }
+    }
     @media (max-width: 767px) {
       body { overflow: auto; }
-      #shell {
-        grid-template-columns: 1fr;
-        grid-template-rows: var(--topbar-h) var(--mobtab-h) 1fr;
-        height: 100svh;
-      }
-      #sidebar     { display: none; }
-      #mobile-tabs { display: block; }
-      #content     { height: calc(100svh - var(--topbar-h) - var(--mobtab-h)); overflow: hidden; }
-
-      #topbar     { padding: 0 .85rem; }
-      .brand-sub  { display: none; }
+      #shell { grid-template-rows: var(--topbar-h) 1fr; height: 100svh; }
+      #content { height: calc(100svh - var(--topbar-h)); overflow: hidden; }
+      #topbar { padding: 0 .75rem; border-radius: 0 0 12px 12px; }
+      .brand-sub { display: none; }
       .chip.hide-mob { display: none; }
-
-      #navigation.tab-pane.active,
-      #sensors.tab-pane.active,
-      #nanoplastic.tab-pane.active { padding: .75rem; }
-
+      #navigation.tab-pane.active, #sensors.tab-pane.active, #nanoplastic.tab-pane.active { padding: .75rem; }
       .ov-tl { top: .5rem; left: .5rem; }
-      .ov-tr { top: .5rem; right: .5rem; width: 175px; }
-      .ov-bl { bottom: .5rem; left: .5rem; width: 188px; }
-      .ov-br { bottom: .5rem; right: .5rem; width: 178px; }
-
+      .ov-compass { top: .5rem; right: .5rem; width: 178px; }
+      .ov-ctrl { bottom: 2.6rem; right: .5rem; width: calc(100vw - 1rem); }
+      .tape-val { font-size: .88rem; }
       .sensors-grid { grid-template-columns: 1fr; }
       .metric-grid-3 { grid-template-columns: repeat(2,1fr); }
       .metric-grid-4 { grid-template-columns: repeat(2,1fr); }
       .stat-row { grid-template-columns: repeat(2,1fr); gap: .45rem; }
-      .stat-num { font-size: 1.4rem; }
-      .nano-grid { grid-template-columns: 1fr; }
+      .stat-num { font-size: 1.55rem; }
+      .nano-analysis-body { grid-template-columns: 1fr; }
+      .nano-stats-col { flex-direction: row; flex-wrap: wrap; }
+      .nano-stat-item { min-width: calc(50% - .19rem); }
     }
-
     @media (max-width: 420px) {
-      .ov-tr { width: 152px; }
-      .ov-bl { width: 165px; }
-      .ov-br { width: 158px; }
-      .metric-val { font-size: .88rem; }
+      .ov-compass { width: 155px; }
+      .stat-num { font-size: 1.3rem; }
+      .nano-stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    @supports (padding-bottom: env(safe-area-inset-bottom)) {
+      #topbar { padding-bottom: env(safe-area-inset-bottom); }
     }
   </style>
 </head>
 <body>
 <div id="shell">
 
-  <!-- ── TOPBAR ── -->
+  <!-- ── TOPBAR WITH TABS ── -->
   <header id="topbar">
     <div class="brand">
       <div class="brand-icon"><i class="bi bi-water"></i></div>
-      <div>
+      <div class="brand-text">
         <div class="brand-name">AquaScan</div>
-        <div class="brand-sub">USV Command v2.1</div>
+        <div class="brand-sub">USV Command · v2.1</div>
       </div>
     </div>
-    <div class="topbar-sep"></div>
+
+    <div class="topbar-div"></div>
+
+    <nav class="header-tabs">
+      <div class="htab active" data-tab="usv" onclick="showTab('usv')">
+        <i class="bi bi-broadcast"></i><span>USV Control</span>
+      </div>
+      <div class="htab" data-tab="navigation" onclick="showTab('navigation')">
+        <i class="bi bi-compass"></i><span>Navigation</span>
+      </div>
+      <div class="htab" data-tab="sensors" onclick="showTab('sensors')">
+        <i class="bi bi-activity"></i><span>Sensors</span>
+      </div>
+      <div class="htab" data-tab="nanoplastic" onclick="showTab('nanoplastic')">
+        <i class="bi bi-virus2"></i><span>Nanoplastic</span>
+      </div>
+    </nav>
+
     <div class="topbar-chips">
-      <span class="chip hide-mob"><i class="bi bi-reception-4"></i> <span id="loraStat">LoRa: ---</span></span>
-      <span class="chip hide-mob"><i class="bi bi-satellite"></i> <span id="gpsStatus">GPS: ---</span></span>
-      <span class="chip"><i class="bi bi-clock"></i> <span id="time">--:--:--</span></span>
-      <span class="live-pill"><span class="live-dot"></span>LIVE</span>
+      <span class="chip hide-mob"><i class="bi bi-reception-4"></i><span id="loraStat">LoRa: ---</span></span>
+      <span class="chip hide-mob"><i class="bi bi-satellite"></i><span id="gpsStatus">GPS: ---</span></span>
+      <span class="chip"><i class="bi bi-clock"></i><span id="time">--:--:--</span></span>
+      <span class="live-pill"><div class="live-ring"></div>Live</span>
     </div>
   </header>
 
-  <!-- ── MOBILE TABS ── -->
-  <div id="mobile-tabs">
-    <div class="mob-tabs-inner">
-      <div class="mob-tab active" data-tab="usv"         onclick="showTab('usv')">        <i class="bi bi-broadcast"></i><span>USV</span></div>
-      <div class="mob-tab"        data-tab="navigation"  onclick="showTab('navigation')"> <i class="bi bi-compass"></i><span>Nav</span></div>
-      <div class="mob-tab"        data-tab="sensors"     onclick="showTab('sensors')">    <i class="bi bi-activity"></i><span>Sensors</span></div>
-      <div class="mob-tab"        data-tab="nanoplastic" onclick="showTab('nanoplastic')"><i class="bi bi-virus2"></i><span>Nano</span></div>
-    </div>
-  </div>
-
-  <!-- ── DESKTOP SIDEBAR ── -->
-  <nav id="sidebar">
-    <div class="nav-section-label">Panels</div>
-    <div class="nav-item active" data-tab="usv"         onclick="showTab('usv')">
-      <div class="nav-icon"><i class="bi bi-broadcast"></i></div><span>USV Control</span>
-    </div>
-    <div class="nav-item"        data-tab="navigation"  onclick="showTab('navigation')">
-      <div class="nav-icon"><i class="bi bi-compass"></i></div><span>Navigation</span>
-    </div>
-    <div class="nav-item"        data-tab="sensors"     onclick="showTab('sensors')">
-      <div class="nav-icon"><i class="bi bi-activity"></i></div><span>Sensors &amp; Logs</span>
-    </div>
-    <div class="nav-item"        data-tab="nanoplastic" onclick="showTab('nanoplastic')">
-      <div class="nav-icon"><i class="bi bi-virus2"></i></div><span>Nanoplastic</span>
-    </div>
-    <div class="sidebar-footer">
-      <div class="sidebar-footer-text">AquaScan &copy; 2025</div>
-      <div style="display:flex;justify-content:center;">
-        <div class="sidebar-version"><i class="bi bi-hexagon-fill" style="font-size:.38rem;"></i>&nbsp;v2.1.0 STABLE</div>
-      </div>
-    </div>
-  </nav>
-
-  <!-- ══════════════════════════════════════
-       MAIN CONTENT
-  ══════════════════════════════════════ -->
+  <!-- ── CONTENT ── -->
   <main id="content">
 
-    <!-- ─────────────────────────────────
-         TAB 1 · USV CONTROL
-         Full-screen map + overlay widgets
-    ───────────────────────────────── -->
+    <!-- TAB 1: USV MAP -->
     <div id="usv" class="tab-pane active">
-
-      <!-- Leaflet map fills everything -->
       <div id="map"></div>
-
-      <!-- Overlays container (pointer-events:none so map clicks still work) -->
       <div class="map-overlays">
 
-        <!-- TOP-LEFT: Map controls -->
+        <!-- top-left view controls -->
         <div class="ov ov-tl">
-          <div class="panel-ov" style="display:flex;align-items:center;gap:.32rem;padding:.45rem .62rem;flex-wrap:wrap;">
-            <span class="panel-title" style="margin-right:.18rem;"><div class="panel-dot"></div><i class="bi bi-map"></i>Track View</span>
-            <button class="btn btn-teal btn-sm" onclick="centerAndZoom()"><i class="bi bi-crosshair"></i> Center</button>
-            <button class="btn btn-sm" style="padding:.26rem .55rem;font-size:.65rem;" onclick="zoomToFit()">Fit</button>
-            <button class="btn btn-sm" style="padding:.26rem .55rem;font-size:.65rem;" id="autoZoomBtn" onclick="toggleAutoZoom()">Auto</button>
+          <div class="panel-ov">
+            <div class="map-ctrl-pill">
+              <span class="panel-title" style="font-size:.72rem;margin-right:.05rem;">
+                <div class="panel-pip"></div><i class="bi bi-map"></i>View
+              </span>
+              <button class="btn btn-jade btn-sm" onclick="centerAndZoom()"><i class="bi bi-crosshair"></i> Center</button>
+              <button class="btn btn-sm" onclick="zoomToFit()">Fit</button>
+              <button class="btn btn-sm" id="autoZoomBtn" onclick="toggleAutoZoom()">Auto</button>
+            </div>
           </div>
         </div>
 
-        <!-- TOP-RIGHT: Compass + Orientation -->
-        <div class="ov ov-tr">
+        <!-- Compass — top-right -->
+        <div class="ov-compass">
           <div class="panel-ov">
-            <div class="panel-head" style="padding:.45rem .72rem;">
-              <div class="panel-title"><div class="panel-dot"></div><i class="bi bi-compass"></i>Compass</div>
+            <div class="panel-head" style="padding:.44rem .78rem;">
+              <div class="panel-title"><div class="panel-pip"></div><i class="bi bi-compass"></i>Compass</div>
             </div>
             <div class="compass-wrap">
-              <div class="compass-label">Heading / Bearing</div>
-
-              <!-- SVG Compass Rose -->
-              <svg width="172" height="172" viewBox="0 0 160 160" id="compassSVG" style="flex-shrink:0;">
-                <circle cx="80" cy="80" r="74" fill="none" stroke="rgba(0,229,180,.12)" stroke-width="1"/>
-                <circle cx="80" cy="80" r="68" fill="none" stroke="rgba(0,229,180,.05)" stroke-width="8"/>
-                <g stroke="rgba(0,229,180,.28)" stroke-width="1">
+              <div class="compass-sublabel">Heading / Bearing</div>
+              <svg width="152" height="152" viewBox="0 0 160 160" id="compassSVG" style="flex-shrink:0;">
+                <defs><filter id="glow"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+                <circle cx="80" cy="80" r="76" fill="none" stroke="rgba(0,198,255,.15)" stroke-width="1.5"/>
+                <circle cx="80" cy="80" r="68" fill="none" stroke="rgba(0,198,255,.08)" stroke-width="9"/>
+                <circle cx="80" cy="80" r="62" fill="none" stroke="rgba(0,198,255,.10)" stroke-width="1"/>
+                <g stroke="rgba(0,198,255,.40)" stroke-width="1.2">
                   <line x1="80" y1="8" x2="80" y2="22" transform="rotate(0   80 80)"/>
                   <line x1="80" y1="8" x2="80" y2="22" transform="rotate(30  80 80)"/>
                   <line x1="80" y1="8" x2="80" y2="22" transform="rotate(60  80 80)"/>
@@ -793,7 +696,7 @@
                   <line x1="80" y1="8" x2="80" y2="22" transform="rotate(300 80 80)"/>
                   <line x1="80" y1="8" x2="80" y2="22" transform="rotate(330 80 80)"/>
                 </g>
-                <g stroke="rgba(0,229,180,.1)" stroke-width=".8">
+                <g stroke="rgba(0,198,255,.15)" stroke-width=".7">
                   <line x1="80" y1="8" x2="80" y2="15" transform="rotate(10  80 80)"/>
                   <line x1="80" y1="8" x2="80" y2="15" transform="rotate(20  80 80)"/>
                   <line x1="80" y1="8" x2="80" y2="15" transform="rotate(40  80 80)"/>
@@ -819,258 +722,304 @@
                   <line x1="80" y1="8" x2="80" y2="15" transform="rotate(340 80 80)"/>
                   <line x1="80" y1="8" x2="80" y2="15" transform="rotate(350 80 80)"/>
                 </g>
-                <text x="80"  y="32"  text-anchor="middle" fill="#00E5B4"             font-family="JetBrains Mono" font-size="11" font-weight="700" letter-spacing="1">N</text>
-                <text x="128" y="84"  text-anchor="middle" fill="rgba(0,229,180,.42)" font-family="JetBrains Mono" font-size="9">E</text>
-                <text x="80"  y="134" text-anchor="middle" fill="rgba(0,229,180,.42)" font-family="JetBrains Mono" font-size="9">S</text>
-                <text x="32"  y="84"  text-anchor="middle" fill="rgba(0,229,180,.42)" font-family="JetBrains Mono" font-size="9">W</text>
-                <circle cx="80" cy="80" r="52" fill="rgba(0,0,0,.65)"/>
+                <text x="80"  y="31"  text-anchor="middle" fill="#00c6ff" font-family="IBM Plex Mono" font-size="11" font-weight="600" filter="url(#glow)">N</text>
+                <text x="127" y="84"  text-anchor="middle" fill="rgba(0,198,255,.75)" font-family="IBM Plex Mono" font-size="9">E</text>
+                <text x="80"  y="134" text-anchor="middle" fill="rgba(0,198,255,.50)" font-family="IBM Plex Mono" font-size="9">S</text>
+                <text x="33"  y="84"  text-anchor="middle" fill="rgba(0,198,255,.65)" font-family="IBM Plex Mono" font-size="9">W</text>
+                <circle cx="80" cy="80" r="52" fill="rgba(10,18,25,.90)"/>
                 <g id="compassTarget">
-                  <line x1="80" y1="26" x2="80" y2="37" stroke="#FFB627" stroke-width="2.5" stroke-linecap="round"/>
+                  <line x1="80" y1="28" x2="80" y2="42" stroke="#f5c842" stroke-width="2.5" stroke-linecap="round" opacity=".90"/>
+                  <circle cx="80" cy="28" r="2.5" fill="#f5c842" opacity=".80"/>
                 </g>
                 <g id="compassNeedle">
-                  <polygon points="80,22 74.5,70 80,66 85.5,70" fill="#00E5B4" opacity=".92"/>
-                  <polygon points="80,138 74.5,90 80,94 85.5,90" fill="rgba(0,229,180,.18)"/>
+                  <polygon points="80,20 74,66 80,62 86,66" fill="#00c6ff" opacity=".92" filter="url(#glow)"/>
+                  <polygon points="80,140 74,94 80,98 86,94" fill="rgba(0,198,255,.18)"/>
                 </g>
-                <circle cx="80" cy="80" r="5" fill="#00E5B4" opacity=".88"/>
-                <circle cx="80" cy="80" r="2.5" fill="#02060E"/>
+                <circle cx="80" cy="80" r="6" fill="rgba(0,198,255,.18)" stroke="rgba(0,198,255,.65)" stroke-width="1.5"/>
+                <circle cx="80" cy="80" r="3" fill="#00c6ff" opacity=".92"/>
               </svg>
-
-              <!-- Heading + Target tape -->
               <div class="heading-tape">
                 <div><div class="tape-lbl">Heading</div><div id="head" class="tape-val">---</div></div>
                 <div style="text-align:right;"><div class="tape-lbl">Target</div><div id="tbrng" class="tape-val" style="color:var(--amber);">---</div></div>
               </div>
-
-              <!-- Relative bearing mini-tape -->
               <div class="brng-tape">
                 <div class="brng-row">
                   <span class="brng-lbl">Rel. Bearing</span>
                   <span class="brng-num" id="brngNum2">---</span>
                 </div>
                 <div class="brng-track">
-                  <div id="brngCursor2" style="position:absolute;top:-6px;left:50%;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:9px solid var(--amber);transform:translateX(-50%);filter:drop-shadow(0 0 4px rgba(255,182,39,.7));transition:left .35s;"></div>
+                  <div id="brngCursor2" style="position:absolute;top:-5px;left:50%;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:8px solid var(--amber);transform:translateX(-50%);transition:left .36s;"></div>
                 </div>
-                <div class="brng-row" style="margin-top:.3rem;">
-                  <span class="brng-lbl">← PORT</span>
-                  <span class="brng-lbl" style="color:var(--amber);">STBD →</span>
+                <div class="brng-row" style="margin-top:.26rem;">
+                  <span class="brng-lbl">← Port</span>
+                  <span class="brng-lbl" style="color:var(--amber);">Stbd →</span>
                 </div>
-              </div>
-
-              <!-- LoRa / GPS connection status -->
-              <div class="conn-row">
-                <div class="conn-cell">
-                  <div class="metric-lbl">LoRa</div>
-                  <div id="loraStatMob" class="metric-val sm">---</div>
-                </div>
-                <div class="conn-cell">
-                  <div class="metric-lbl">GPS</div>
-                  <div id="gpsStatMob" class="metric-val sm">---</div>
-                </div>
-              </div>
-
-            </div><!-- /compass-wrap -->
-          </div><!-- /panel-ov -->
-        </div><!-- /ov-tr -->
-
-        <!-- BOTTOM-LEFT: Mission + Actuators -->
-        <div class="ov ov-bl">
-          <div class="panel-ov">
-            <div class="panel-head" style="padding:.45rem .72rem;">
-              <div class="panel-title"><div class="panel-dot"></div><i class="bi bi-joystick"></i>Controls</div>
-            </div>
-            <div class="panel-body" style="display:flex;flex-direction:column;gap:.65rem;">
-
-              <!-- Mission buttons -->
-              <div>
-                <div class="section-label">Mission</div>
-                <div style="display:flex;flex-direction:column;gap:.36rem;">
-                  <button class="btn btn-teal"  style="width:100%;" onclick="fetch('/start')"><i class="bi bi-play-fill"></i> Start Mission</button>
-                  <button class="btn btn-rose"  style="width:100%;" onclick="stopReset()"><i class="bi bi-stop-circle"></i> Stop / Reset</button>
-                  <button class="btn btn-amber" style="width:100%;" onclick="startCalibration()"><i class="bi bi-gear-wide-connected"></i> Calibrate</button>
-                </div>
-              </div>
-
-              <!-- Servo -->
-              <div class="sub-panel">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                  <div class="row-label"><i class="bi bi-motherboard"></i> Servo</div>
-                  <label class="toggle"><input type="checkbox" id="servoToggle" onchange="onServoToggle(this.checked)"><span class="tgl-track"></span></label>
-                </div>
-                <div id="servoState" style="font-family:var(--mono);font-size:.52rem;color:var(--text-dim);margin-top:.25rem;letter-spacing:.05em;font-weight:400;">OFF</div>
-              </div>
-
-              <!-- Pump -->
-              <div class="sub-panel">
-                <div class="row-label" style="margin-bottom:.32rem;"><i class="bi bi-droplet-fill"></i> Pump</div>
-                <input type="number" id="pumpRot" min="1" max="20" value="1">
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.25rem;margin-top:.38rem;">
-                  <button class="btn btn-emerald btn-sm" onclick="pumpForward()">FWD</button>
-                  <button class="btn btn-amber  btn-sm" onclick="pumpReverse()">REV</button>
-                  <button class="btn btn-rose   btn-sm" onclick="pumpStop()">STP</button>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div><!-- /ov-bl -->
-
-        <!-- BOTTOM-RIGHT: Throttle -->
-        <div class="ov ov-br">
-          <div class="panel-ov">
-            <div class="panel-head" style="padding:.45rem .72rem;">
-              <div class="panel-title"><div class="panel-dot"></div><i class="bi bi-speedometer2"></i>Throttle</div>
-            </div>
-            <div class="panel-body" style="display:flex;flex-direction:column;gap:.55rem;">
-              <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div class="row-label"><i class="bi bi-link-45deg"></i> Sync</div>
-                <label class="toggle"><input type="checkbox" id="syncEnabled" onchange="onSyncToggle(this.checked)"><span class="tgl-track"></span></label>
-              </div>
-              <div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:.26rem;">
-                  <span class="row-label">Left</span><span id="thrLeftVal" class="row-val">1000 µs</span>
-                </div>
-                <input type="range" min="1000" max="2000" value="1000" id="leftThrottle" oninput="updateLeftThrottle(this.value)">
-              </div>
-              <div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:.26rem;">
-                  <span class="row-label">Right</span><span id="thrRightVal" class="row-val">1000 µs</span>
-                </div>
-                <input type="range" min="1000" max="2000" value="1000" id="rightThrottle" oninput="updateRightThrottle(this.value)">
-              </div>
-              <hr class="divider">
-              <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span class="row-label" style="font-size:.68rem;">Override</span>
-                <span id="manualOverrideVal" class="override-chip">OFF</span>
               </div>
             </div>
           </div>
-        </div><!-- /ov-br -->
-
-        <!-- Bottom center: map click hint -->
-        <div class="map-hint-chip">
-          <i class="bi bi-plus-circle"></i> Click map to add waypoint
         </div>
 
-      </div><!-- /map-overlays -->
-    </div><!-- /usv tab -->
+        <!-- ── Controls — bottom-right ── -->
+        <div class="ov-ctrl">
+          <div class="panel-ov">
+            <div class="panel-head" style="padding:.54rem .95rem;">
+              <div class="panel-title"><div class="panel-pip"></div><i class="bi bi-joystick"></i>Controls &amp; Throttle</div>
+            </div>
+            <div class="ctrl-body ctrl-section">
 
+              <!-- Row 1: Mission -->
+              <div>
+                <div class="ctrl-subsec-label"><i class="bi bi-flag-fill" style="font-size:.72rem;color:var(--accent);"></i>Mission</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.70rem;">
+                  <button class="ctrl-mission-btn jade" onclick="fetch('/start')"><i class="bi bi-play-fill"></i> Start</button>
+                  <button class="ctrl-mission-btn rose"  onclick="stopReset()"><i class="bi bi-stop-circle"></i> Stop</button>
+                  <button class="ctrl-mission-btn amber" onclick="startCalibration()"><i class="bi bi-gear-wide-connected"></i> Calibrate</button>
+                </div>
+              </div>
 
-    <!-- ─────────────────────────────────
-         TAB 2 · NAVIGATION
-         Full-width metrics (no compass here)
-    ───────────────────────────────── -->
+              <!-- Row 2: Servo + Pump -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.90rem;">
+                <div class="sub-panel" style="display:flex;flex-direction:column;gap:.65rem;padding:1.0rem 1.1rem;">
+                  <div class="ctrl-subsec-label" style="margin-bottom:0;"><i class="bi bi-motherboard" style="font-size:.72rem;color:var(--accent);"></i>Servo</div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div class="row-label" style="font-size:.86rem;">Enable</div>
+                    <label class="toggle"><input type="checkbox" id="servoToggle" onchange="onServoToggle(this.checked)"><span class="tgl-track"></span></label>
+                  </div>
+                  <div id="servoState" style="font-family:var(--f-mono);font-size:.78rem;color:var(--text-dim);">OFF</div>
+                </div>
+                <div class="sub-panel" style="display:flex;flex-direction:column;gap:.55rem;padding:1.0rem 1.1rem;">
+                  <div class="ctrl-subsec-label" style="margin-bottom:0;"><i class="bi bi-droplet-fill" style="font-size:.72rem;color:var(--accent);"></i>Pump</div>
+                  <input type="number" id="pumpRot" min="1" max="20" value="1" style="margin-top:.10rem;padding:.44rem .55rem;font-size:.80rem;">
+                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.30rem;">
+                    <button class="pump-btn emerald" onclick="pumpForward()">Fwd</button>
+                    <button class="pump-btn amber"   onclick="pumpReverse()">Rev</button>
+                    <button class="pump-btn rose"    onclick="pumpStop()">Stop</button>
+                  </div>
+                </div>
+              </div>
+
+              <hr class="divider" style="margin:.02rem 0;">
+
+              <!-- Throttle -->
+              <div>
+                <div class="ctrl-subsec-label">
+                  <i class="bi bi-speedometer2" style="font-size:.72rem;color:var(--accent);"></i>Throttle
+                  <span style="margin-left:auto;display:flex;align-items:center;gap:.40rem;font-size:.76rem;color:var(--text-sub);">Sync
+                    <label class="toggle" style="width:32px;height:18px;"><input type="checkbox" id="syncEnabled" onchange="onSyncToggle(this.checked)"><span class="tgl-track"></span></label>
+                  </span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:.38rem;">
+                      <span class="row-label" style="font-size:.84rem;"><i class="bi bi-arrow-left"></i> Left</span>
+                      <span id="thrLeftVal" class="row-val" style="font-size:.84rem;">1000 µs</span>
+                    </div>
+                    <input type="range" min="1000" max="2000" value="1000" id="leftThrottle" oninput="updateLeftThrottle(this.value)">
+                  </div>
+                  <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:.38rem;">
+                      <span class="row-label" style="font-size:.84rem;">Right <i class="bi bi-arrow-right"></i></span>
+                      <span id="thrRightVal" class="row-val" style="font-size:.84rem;">1000 µs</span>
+                    </div>
+                    <input type="range" min="1000" max="2000" value="1000" id="rightThrottle" oninput="updateRightThrottle(this.value)">
+                  </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.60rem;">
+                  <span class="row-label" style="font-size:.82rem;">Manual Override</span>
+                  <span id="manualOverrideVal" class="override-chip">OFF</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="map-hint">
+          <i class="bi bi-plus-circle"></i> Click map to add waypoint
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         TAB 2: NAVIGATION — Sample 1 layout
+         ══════════════════════════════════════ -->
     <div id="navigation" class="tab-pane">
       <div style="display:flex;flex-direction:column;gap:1rem;">
 
-        <!-- Navigation Data -->
-        <div class="panel">
-          <div class="panel-head">
-            <div class="panel-title"><div class="panel-dot"></div><i class="bi bi-speedometer2"></i>Navigation Data</div>
+        <!-- Page header -->
+        <div class="nav-page-row">
+          <div class="nav-page-title">Navigation</div>
+          <div class="nav-page-tag">
+            <div class="nav-page-tag-dot"></div>
+            <span id="gpsTagLabel">GPS Fixed · 9 satellites</span>
           </div>
-          <div class="panel-body" style="display:flex;flex-direction:column;gap:.85rem;">
+        </div>
 
-            <div>
-              <div class="section-label">Heading &amp; Position</div>
-              <div class="metric-grid-4">
-                <div class="metric">
-                  <div class="metric-lbl">Compass Heading</div>
-                  <div id="head2" class="metric-val hi">---</div>
+        <!-- TOP: 3 big-number cards -->
+        <div>
+          <div class="nav-sec">Heading &amp; Bearing</div>
+          <div class="nav-top-grid">
+            <div class="nav-bignum-card">
+              <div class="nav-bn-label">Compass Heading</div>
+              <div class="nav-bn-value" style="color:var(--accent);" id="head2">---</div>
+              <div class="nav-bn-sub">Magnetic north</div>
+            </div>
+            <div class="nav-bignum-card">
+              <div class="nav-bn-label">Target Bearing</div>
+              <div class="nav-bn-value" style="color:var(--amber);" id="tbrng2">---</div>
+              <div class="nav-bn-sub">Next waypoint</div>
+            </div>
+            <div class="nav-bignum-card">
+              <div class="nav-bn-label">Relative Bearing</div>
+              <div class="nav-bn-value" style="color:var(--amber);" id="relBearing2">---</div>
+              <div class="nav-bn-sub" id="relBearingDir">---</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MIDDLE: Course Detail + Position -->
+        <div class="nav-mid-grid">
+
+          <!-- Course Detail -->
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">
+                <div class="panel-pip"></div>
+                <i class="bi bi-compass"></i>Course Detail
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="nav-dtable">
+                <div class="nav-drow">
+                  <span class="nav-dl">Steering Error</span>
+                  <span class="nav-dv" style="color:var(--amber);" id="err2">---</span>
                 </div>
-                <div class="metric">
-                  <div class="metric-lbl">Target Bearing</div>
-                  <div id="tbrng2" class="metric-val warn">---</div>
+                <div class="nav-drow">
+                  <span class="nav-dl">Direction</span>
+                  <span class="nav-dv" style="color:var(--amber);" id="direction2">---</span>
                 </div>
-                <div class="metric">
-                  <div class="metric-lbl">Relative Bearing</div>
-                  <div id="relBearing2" class="metric-val">---</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-lbl">Steering Error</div>
-                  <div id="err2" class="metric-val">---</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-lbl">Direction</div>
-                  <div id="direction2" class="metric-val">---</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-lbl">Turn Intensity</div>
-                  <div id="intensity2" class="metric-val">---</div>
-                  <div style="height:3px;background:rgba(0,229,180,.05);border-radius:5px;overflow:hidden;margin-top:.26rem;">
-                    <div id="intensityFill2" style="height:100%;border-radius:5px;background:linear-gradient(90deg,var(--c),var(--amber));transition:width .4s;width:0%;"></div>
+                <div class="nav-drow">
+                  <span class="nav-dl">Turn Intensity</span>
+                  <div style="display:flex;align-items:center;gap:.65rem;">
+                    <span class="nav-dv" id="intensity2">---</span>
+                    <div style="height:4px;background:var(--border);border-radius:3px;overflow:hidden;width:80px;flex-shrink:0;">
+                      <div id="intensityFill2" style="height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--amber));transition:width .4s;width:0%;"></div>
+                    </div>
                   </div>
                 </div>
-                <div class="metric">
-                  <div class="metric-lbl">Cross-track Err</div>
-                  <div id="xte2" class="metric-val">---</div>
+                <div class="nav-drow">
+                  <span class="nav-dl">Cross-track Error</span>
+                  <span class="nav-dv" style="color:var(--red);" id="xte2">---</span>
                 </div>
-                <div class="metric">
-                  <div class="metric-lbl">Dist to Node</div>
-                  <div id="dist2" class="metric-val">---</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-lbl">Latitude</div>
-                  <div id="lat2" class="metric-val sm hi">---</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-lbl">Longitude</div>
-                  <div id="lon2" class="metric-val sm hi">---</div>
-                </div>
-                <div class="metric span2" style="grid-column: span 2;">
-                  <div class="metric-lbl">Active Node</div>
-                  <div id="wp2" class="metric-val">---</div>
+                <div class="nav-drow">
+                  <span class="nav-dl">Distance to Node</span>
+                  <span class="nav-dv" style="color:var(--emerald);" id="dist2">---</span>
                 </div>
               </div>
             </div>
+          </div>
 
-            <!-- Bearing Indicator -->
-            <div>
-              <div class="section-label">Bearing Indicator</div>
-              <div class="bearing-wrap">
-                <div class="bearing-row">
-                  <span class="bearing-lbl">Rel. Bearing</span>
-                  <span id="bearingRel">---</span>
+          <!-- Position -->
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">
+                <div class="panel-pip"></div>
+                <i class="bi bi-geo-alt"></i>Position
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="nav-dtable">
+                <div class="nav-drow">
+                  <span class="nav-dl">Latitude</span>
+                  <span class="nav-dv" style="color:var(--accent);font-size:.76rem;" id="lat2">---</span>
                 </div>
-                <div id="bearingVisual" class="bearing-track">
-                  <div class="bearing-track-fill"></div>
+                <div class="nav-drow">
+                  <span class="nav-dl">Longitude</span>
+                  <span class="nav-dv" style="color:var(--accent);font-size:.76rem;" id="lon2">---</span>
                 </div>
-                <div class="bearing-labels">
-                  <span>← LEFT</span><span id="bearingText">STRAIGHT</span><span>RIGHT →</span>
+                <div class="nav-drow">
+                  <span class="nav-dl">GPS Fix</span>
+                  <span class="nav-dv" style="color:var(--emerald);" id="gpsFix2">Fixed</span>
+                </div>
+                <div class="nav-drow">
+                  <span class="nav-dl">Satellites</span>
+                  <span class="nav-dv" id="gpsSats2">---</span>
+                </div>
+                <div class="nav-drow">
+                  <span class="nav-dl">Active Node</span>
+                  <span class="nav-dv" style="color:var(--accent);" id="wp2">---</span>
                 </div>
               </div>
             </div>
+          </div>
 
-            <!-- Node Progress -->
-            <div>
-              <div class="section-label">Node Progress</div>
+        </div>
+
+        <!-- BOTTOM: Bearing Indicator + Waypoint Progress -->
+        <div class="nav-mid-grid">
+
+          <!-- Bearing Indicator -->
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">
+                <div class="panel-pip"></div>
+                <i class="bi bi-arrows-expand"></i>Bearing Indicator
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="nav-bearing-wrap">
+                <div class="nav-bearing-header">
+                  <span class="nav-bearing-sub">Relative bearing</span>
+                  <span class="nav-bearing-val" id="bearingRel">---</span>
+                </div>
+                <div class="nav-bearing-track-wrap">
+                  <div id="bearingVisual" class="bearing-track">
+                    <div class="bearing-track-fill"></div>
+                  </div>
+                </div>
+                <div class="nav-bearing-labels">
+                  <span>← Port</span>
+                  <span id="bearingText" style="color:var(--amber);">Straight</span>
+                  <span>Starboard →</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Waypoint Progress -->
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">
+                <div class="panel-pip"></div>
+                <i class="bi bi-geo-alt-fill"></i>Waypoint Progress
+              </div>
+            </div>
+            <div class="panel-body">
               <div class="sub-panel">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.42rem;">
-                  <span class="row-label"><i class="bi bi-geo-alt"></i> Waypoint Progress</span>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.50rem;">
+                  <span class="row-label"><i class="bi bi-geo-alt"></i>Progress</span>
                   <span id="wpProgress" class="row-val">---</span>
                 </div>
                 <div id="nodeDots" class="node-dots"></div>
               </div>
             </div>
+          </div>
 
-          </div><!-- /panel-body -->
-        </div><!-- /nav data panel -->
+        </div>
 
       </div>
-    </div><!-- /navigation tab -->
+    </div>
 
-
-    <!-- ─────────────────────────────────
-         TAB 3 · SENSORS & LOGS
-    ───────────────────────────────── -->
+    <!-- TAB 3: SENSORS -->
     <div id="sensors" class="tab-pane">
       <div class="sensors-grid">
-
         <div class="panel">
           <div class="panel-head">
-            <div class="panel-title"><div class="panel-dot"></div><i class="bi bi-droplet-half"></i>Water Quality &amp; Heavy Metals</div>
+            <div class="panel-title"><div class="panel-pip"></div><i class="bi bi-droplet-half"></i>Water Quality &amp; Heavy Metals</div>
           </div>
-          <div class="panel-body" style="display:flex;flex-direction:column;gap:.85rem;">
+          <div class="panel-body" style="display:flex;flex-direction:column;gap:.90rem;">
             <div>
-              <div class="section-label">Live Readings</div>
+              <div class="section-label"><span>//</span> Live Readings</div>
               <div class="metric-grid-3">
                 <div class="metric"><div class="metric-lbl">Temperature</div><div id="waterTemp" class="metric-val sm">---</div></div>
                 <div class="metric"><div class="metric-lbl">pH Level</div><div id="waterPH" class="metric-val sm hi">---</div></div>
@@ -1078,82 +1027,94 @@
               </div>
             </div>
             <div>
-              <div class="section-label">Risk Assessment</div>
+              <div class="section-label"><span>//</span> Risk Assessment</div>
               <div class="risk-panel">
-                <div class="metric-lbl" style="color:rgba(99,102,241,.65);margin-bottom:.28rem;">Heavy Metal Risk</div>
-                <div id="hmRiskLevel" class="metric-val" style="font-size:1.05rem;margin-bottom:.2rem;">---</div>
-                <div id="hmRiskScore" style="font-family:var(--mono);font-size:.54rem;color:var(--text-sub);margin-bottom:.28rem;">Score: ---</div>
-                <div id="hmRiskReasons" style="font-family:var(--ui);font-size:.7rem;font-weight:500;color:var(--text-dim);line-height:1.65;">---</div>
+                <div class="metric-lbl" style="color:rgba(200,180,255,.90);margin-bottom:.28rem;">Heavy Metal Risk</div>
+                <div id="hmRiskLevel" class="metric-val" style="font-size:1.05rem;margin-bottom:.18rem;">---</div>
+                <div id="hmRiskScore" style="font-family:var(--f-mono);font-size:.72rem;color:var(--text-sub);margin-bottom:.26rem;">Score: ---</div>
+                <div id="hmRiskReasons" style="font-family:var(--f-mono);font-size:.76rem;color:var(--text-dim);line-height:1.7;">---</div>
               </div>
             </div>
           </div>
         </div>
-
         <div class="panel">
           <div class="panel-head">
-            <div class="panel-title"><div class="panel-dot"></div><i class="bi bi-table"></i>Heavy Metal Log</div>
+            <div class="panel-title"><div class="panel-pip"></div><i class="bi bi-table"></i>Heavy Metal Log</div>
           </div>
           <div class="table-wrap scroll-y" style="max-height:420px;">
             <table class="data-table">
-              <thead><tr><th>Date</th><th>Time</th><th>TDS</th><th>pH</th><th>Temp</th><th>Risk</th></tr></thead>
-              <tbody id="hmLogBody"><tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-dim);">Loading…</td></tr></tbody>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>TDS</th>
+                  <th>pH</th>
+                  <th>Temp</th>
+                  <th>WQI</th>
+                  <th>Risk</th>
+                </tr>
+              </thead>
+              <tbody id="hmLogBody"><tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-dim);">Loading…</td></tr></tbody>
             </table>
           </div>
         </div>
-
       </div>
-    </div><!-- /sensors tab -->
+    </div>
 
-
-    <!-- ─────────────────────────────────
-         TAB 4 · NANOPLASTIC
-    ───────────────────────────────── -->
+    <!-- TAB 4: NANOPLASTIC -->
     <div id="nanoplastic" class="tab-pane">
 
-      <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.9rem;flex-wrap:wrap;">
-        <button id="captureBtn" class="btn btn-teal" style="font-size:.78rem;padding:.5rem 1.3rem;">
-          <i class="bi bi-camera-fill"></i> Capture &amp; Analyze
-        </button>
-        <span id="captureStatus" class="cap-status">Ready</span>
-      </div>
-
-      <div class="stat-row">
-        <div class="stat-card"><div class="stat-sub">Total Samples</div><div id="totalSamples" class="stat-num">0</div></div>
-        <div class="stat-card"><div class="stat-sub">Avg Particles</div><div id="avgParticles" class="stat-num">0</div></div>
-        <div class="stat-card"><div class="stat-sub">High Risk</div><div id="highRiskCount" class="stat-num" style="color:var(--red);">0</div></div>
-        <div class="stat-card"><div class="stat-sub">Max Particles</div><div id="maxParticles" class="stat-num">0</div></div>
-      </div>
-
-      <div class="panel" style="margin-bottom:.95rem;">
-        <div class="panel-head">
-          <div class="panel-title"><div class="panel-dot"></div><i class="bi bi-image"></i>Latest Analysis</div>
+      <div style="display:flex;justify-content:center;margin-bottom:.90rem;">
+        <div style="display:flex;gap:.55rem;">
+          <div class="stat-card" style="min-width:110px;"><div class="stat-sub">Total Samples</div><div id="totalSamples" class="stat-num">0</div></div>
+          <div class="stat-card" style="min-width:110px;"><div class="stat-sub">Avg Particles</div><div id="avgParticles" class="stat-num">0</div></div>
+          <div class="stat-card" style="min-width:110px;"><div class="stat-sub">High Risk</div><div id="highRiskCount" class="stat-num" style="color:var(--red);">0</div></div>
+          <div class="stat-card" style="min-width:110px;"><div class="stat-sub">Max Particles</div><div id="maxParticles" class="stat-num">0</div></div>
         </div>
-        <div class="panel-body">
-          <div class="nano-grid">
-            <div>
-              <img id="latestImage" src="" style="display:none;width:100%;max-height:220px;object-fit:contain;border-radius:8px;border:1px solid var(--border2);">
-              <div id="noImageMessage"><i class="bi bi-camera"></i>Awaiting capture…</div>
+      </div>
+
+      <div class="panel" style="margin-bottom:1rem;">
+        <div class="panel-head">
+          <div class="panel-title"><div class="panel-pip"></div><i class="bi bi-image"></i>Latest Analysis</div>
+        </div>
+        <div class="panel-body nano-analysis-body">
+          <div class="image-16-9">
+            <img id="latestImage" src="" alt="Latest processed frame">
+            <div class="no-image-msg" id="noImageMessage">
+              <i class="bi bi-camera"></i>
+              <span>Awaiting capture…</span>
             </div>
-            <div style="display:flex;flex-direction:column;">
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--border2);">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:.55rem;justify-content:space-between;">
+            <div style="display:flex;flex-direction:column;gap:.48rem;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--border2);padding-bottom:.38rem;">
                 <span class="metric-lbl" style="margin:0;">Particles</span>
-                <span id="particleCount" style="font-family:var(--mono);font-size:.72rem;color:var(--text);">---</span>
+                <span id="particleCount" style="font-family:var(--f-mono);font-size:.92rem;font-weight:600;color:var(--text);">---</span>
               </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--border2);">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--border2);padding-bottom:.38rem;">
                 <span class="metric-lbl" style="margin:0;">Concentration</span>
-                <span id="concentration" style="font-family:var(--mono);font-size:.72rem;color:var(--text);">---</span>
+                <span id="concentration" style="font-family:var(--f-mono);font-size:.84rem;font-weight:600;color:var(--text);">---</span>
               </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--border2);">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--border2);padding-bottom:.38rem;">
                 <span class="metric-lbl" style="margin:0;">Intensity</span>
-                <span id="nanointensity" style="font-family:var(--mono);font-size:.72rem;color:var(--text);">---</span>
+                <span id="nanointensity" style="font-family:var(--f-mono);font-size:.92rem;font-weight:600;color:var(--text);">---</span>
               </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--border2);">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--border2);padding-bottom:.38rem;">
                 <span class="metric-lbl" style="margin:0;">Confidence</span>
-                <span id="confidence" style="font-family:var(--mono);font-size:.72rem;color:var(--text);">---</span>
+                <span id="confidence" style="font-family:var(--f-mono);font-size:.92rem;font-weight:600;color:var(--text);">---</span>
               </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;">
                 <span class="metric-lbl" style="margin:0;">Risk Level</span>
-                <span id="riskLevel" style="font-family:var(--ui);font-size:.82rem;font-weight:700;">---</span>
+                <span id="riskLevel" style="font-family:var(--f-ui);font-size:.98rem;font-weight:800;letter-spacing:.04em;">---</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:.40rem;padding-top:.55rem;border-top:1px solid var(--border);">
+              <button id="captureBtn" class="btn btn-capture" style="width:100%;justify-content:center;">
+                <i class="bi bi-camera-fill"></i> Capture &amp; Analyze
+              </button>
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-family:var(--f-ui);font-size:.64rem;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--text-dim);">Status</span>
+                <span id="captureStatus" class="cap-status">Ready</span>
               </div>
             </div>
           </div>
@@ -1162,7 +1123,7 @@
 
       <div class="panel">
         <div class="panel-head">
-          <div class="panel-title"><div class="panel-dot"></div><i class="bi bi-clock-history"></i>Detection History</div>
+          <div class="panel-title"><div class="panel-pip"></div><i class="bi bi-clock-history"></i>Detection History</div>
         </div>
         <div class="table-wrap scroll-y" style="max-height:280px;">
           <table class="data-table">
@@ -1171,17 +1132,12 @@
           </table>
         </div>
       </div>
+    </div>
 
-    </div><!-- /nanoplastic tab -->
-
-  </main><!-- /content -->
-
-</div><!-- /shell -->
+  </main>
+</div>
 
 <script>
-  /* ══════════════════════════════
-     TAB SWITCHING
-  ══════════════════════════════ */
   function showTab(id) {
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
@@ -1190,17 +1146,10 @@
     if (id === 'usv' && typeof usvMap !== 'undefined') setTimeout(() => usvMap.invalidateSize(), 220);
   }
 
-  /* ══════════════════════════════
-     MAP
-  ══════════════════════════════ */
   let usvMap, usvIcon, route, targetLine, waypointMarkers = [];
   let autoZoomEnabled = false, initialZoomDone = false, throttleHoldTimer, throttleDragging = false;
 
-  function holdThrottleUi() {
-    throttleDragging = true;
-    if (throttleHoldTimer) clearTimeout(throttleHoldTimer);
-    throttleHoldTimer = setTimeout(() => { throttleDragging = false; }, 700);
-  }
+  function holdThrottleUi() { throttleDragging = true; if (throttleHoldTimer) clearTimeout(throttleHoldTimer); throttleHoldTimer = setTimeout(() => { throttleDragging = false; }, 700); }
 
   function centerAndZoom(zoomLevel) {
     let lat = parseFloat(document.getElementById('lat2').innerText);
@@ -1208,7 +1157,6 @@
     if (lat && lng && lat != 0 && lng != 0) { usvMap.setView([lat, lng], zoomLevel || 19); return true; }
     return false;
   }
-
   function zoomToFit() {
     let bounds = [], hasPoints = false;
     let lat = parseFloat(document.getElementById('lat2').innerText);
@@ -1217,367 +1165,238 @@
     waypointMarkers.forEach(m => { let ll = m.getLatLng(); bounds.push([ll.lat, ll.lng]); hasPoints = true; });
     if (hasPoints) usvMap.fitBounds(bounds, { padding: [50, 50] });
   }
-
   function toggleAutoZoom() {
     autoZoomEnabled = !autoZoomEnabled;
     let btn = document.getElementById('autoZoomBtn');
-    btn.style.color       = autoZoomEnabled ? 'var(--c)' : '';
-    btn.style.borderColor = autoZoomEnabled ? 'rgba(0,229,180,.4)' : '';
-    btn.style.background  = autoZoomEnabled ? 'rgba(0,229,180,.1)' : '';
+    btn.style.color       = autoZoomEnabled ? 'var(--accent)' : '';
+    btn.style.borderColor = autoZoomEnabled ? 'rgba(0,198,255,.5)' : '';
+    btn.style.background  = autoZoomEnabled ? 'var(--accent-dim)' : '';
     btn.textContent = autoZoomEnabled ? 'Auto ON' : 'Auto';
     if (autoZoomEnabled) centerAndZoom(19);
   }
-
   function startCalibration() { if (confirm('Start compass calibration?')) fetch('/calibrate').then(() => alert('Started.')); }
-
-  function stopReset() {
-    fetch('/clear').then(() => {
-      route.setLatLngs([]); targetLine.setLatLngs([]);
-      waypointMarkers.forEach(m => usvMap.removeLayer(m)); waypointMarkers = [];
-      updatePath(); updateWaypointMarkers();
-    });
-  }
-
+  function stopReset() { fetch('/clear').then(() => { route.setLatLngs([]); targetLine.setLatLngs([]); waypointMarkers.forEach(m => usvMap.removeLayer(m)); waypointMarkers = []; updatePath(); updateWaypointMarkers(); }); }
   function updatePath() { fetch('/path').then(r => r.json()).then(d => { route.setLatLngs(d.map(p => [p.lat, p.lng])); }); }
-
   function updateWaypointMarkers() {
     waypointMarkers.forEach(m => usvMap.removeLayer(m)); waypointMarkers = [];
     fetch('/path').then(r => r.json()).then(d => {
       d.forEach((wp, idx) => {
-        let m = L.circleMarker([wp.lat, wp.lng], { radius: 5, color: '#00E5B4', fillOpacity: .9, weight: 2 })
-          .bindTooltip(`WP ${idx + 1}`).addTo(usvMap);
+        let m = L.circleMarker([wp.lat, wp.lng], { radius: 6, color: '#00c6ff', fillOpacity: .9, weight: 2 }).bindTooltip(`WP ${idx + 1}`).addTo(usvMap);
         waypointMarkers.push(m);
       });
     });
   }
-
-  /* Bearing visual + secondary mini-tape */
   function createBearingVisual(relBearing) {
-    let val     = (typeof relBearing === 'number' && isFinite(relBearing)) ? relBearing : 0;
+    let val = (typeof relBearing === 'number' && isFinite(relBearing)) ? relBearing : 0;
     let clamped = Math.min(Math.max(val, -180), 180);
     let posPct  = ((clamped + 180) / 360) * 100;
-    let dir     = clamped > 4 ? 'RIGHT' : (clamped < -4 ? 'LEFT' : 'STRAIGHT');
-
+    let dir = clamped > 4 ? 'Right' : (clamped < -4 ? 'Left' : 'Straight');
     let existing = document.getElementById('bearingVisual');
-    let fill     = existing.querySelector('.bearing-track-fill');
+    let fill = existing.querySelector('.bearing-track-fill');
     existing.innerHTML = '';
     if (fill) existing.appendChild(fill);
-    let cursor   = document.createElement('div');
-    cursor.className  = 'bearing-cursor';
-    cursor.style.left = posPct + '%';
+    let cursor = document.createElement('div');
+    cursor.className = 'bearing-cursor'; cursor.style.left = posPct + '%';
     existing.appendChild(cursor);
-
     document.getElementById('bearingRel').innerText  = clamped.toFixed(0) + '°';
     document.getElementById('bearingText').innerText = dir;
-
-    let c2 = document.getElementById('brngCursor2');
-    if (c2) c2.style.left = posPct + '%';
-    let n2 = document.getElementById('brngNum2');
-    if (n2) n2.innerText = (clamped >= 0 ? '+' : '') + clamped.toFixed(1) + '°';
+    let c2 = document.getElementById('brngCursor2'); if (c2) c2.style.left = posPct + '%';
+    let n2 = document.getElementById('brngNum2'); if (n2) n2.innerText = (clamped >= 0 ? '+' : '') + clamped.toFixed(1) + '°';
+    let dirLabel = clamped > 4 ? 'Starboard' : (clamped < -4 ? 'Port' : 'On course');
+    let subEl = document.getElementById('relBearingDir');
+    if (subEl) subEl.innerText = dirLabel;
   }
-
-  /* Node dots */
   function renderNodeDots(current, total) {
     let container = document.getElementById('nodeDots');
     if (!container || total < 1) return;
     container.innerHTML = '';
     for (let i = 0; i < total; i++) {
-      let d   = document.createElement('div');
+      let d = document.createElement('div');
       let cls = 'ndot';
-      if (i < current)   cls += ' done';
+      if (i < current) cls += ' done';
       if (i === current) cls += ' act';
-      d.className = cls;
-      container.appendChild(d);
+      d.className = cls; container.appendChild(d);
     }
   }
-
-  /* Control helpers */
   function isSyncEnabled()  { return document.getElementById('syncEnabled').checked; }
   function onSyncToggle(c)  { if (c) updateSyncThrottle(document.getElementById('leftThrottle').value); }
   function onServoToggle(c) { fetch("/servo?value=" + (c ? 1 : 0)); document.getElementById('servoState').innerText = c ? "ON" : "OFF"; }
-  function getPumpRot()     { let v = parseInt(document.getElementById('pumpRot').value); if (isNaN(v) || v < 1) v = 1; if (v > 20) v = 20; document.getElementById('pumpRot').value = v; return v; }
+  function getPumpRot()     { let v = parseInt(document.getElementById('pumpRot').value); if (isNaN(v)||v<1) v=1; if(v>20) v=20; document.getElementById('pumpRot').value=v; return v; }
   function pumpForward()    { fetch("/pump?dir=fwd&rot=" + getPumpRot()); }
   function pumpReverse()    { fetch("/pump?dir=rev&rot=" + getPumpRot()); }
   function pumpStop()       { fetch("/pump?dir=stop"); }
+  function updateSyncThrottle(val) { holdThrottleUi(); let v=parseInt(val); document.getElementById('leftThrottle').value=v; document.getElementById('rightThrottle').value=v; document.getElementById('thrLeftVal').innerText=v+" µs"; document.getElementById('thrRightVal').innerText=v+" µs"; fetch("/set-sync?value="+v); }
+  function updateLeftThrottle(val) { holdThrottleUi(); let v=parseInt(val); document.getElementById('thrLeftVal').innerText=v+" µs"; if(isSyncEnabled()) updateSyncThrottle(v); else fetch("/set-left?value="+v); }
+  function updateRightThrottle(val){ holdThrottleUi(); let v=parseInt(val); document.getElementById('thrRightVal').innerText=v+" µs"; if(isSyncEnabled()) updateSyncThrottle(v); else fetch("/set-right?value="+v); }
+  function setText(id, val) { let el=document.getElementById(id); if(el) el.innerText=val; }
 
-  function updateSyncThrottle(val) {
-    holdThrottleUi(); let v = parseInt(val);
-    document.getElementById('leftThrottle').value  = v;
-    document.getElementById('rightThrottle').value = v;
-    document.getElementById('thrLeftVal').innerText  = v + " µs";
-    document.getElementById('thrRightVal').innerText = v + " µs";
-    fetch("/set-sync?value=" + v);
-  }
-  function updateLeftThrottle(val) {
-    holdThrottleUi(); let v = parseInt(val);
-    document.getElementById('thrLeftVal').innerText = v + " µs";
-    if (isSyncEnabled()) updateSyncThrottle(v); else fetch("/set-left?value=" + v);
-  }
-  function updateRightThrottle(val) {
-    holdThrottleUi(); let v = parseInt(val);
-    document.getElementById('thrRightVal').innerText = v + " µs";
-    if (isSyncEnabled()) updateSyncThrottle(v); else fetch("/set-right?value=" + v);
-  }
-
-  function setText(id, val) { let el = document.getElementById(id); if (el) el.innerText = val; }
-
-  /* Init Leaflet with OpenStreetMap */
   if (document.getElementById('map')) {
     usvMap = L.map('map').setView([14.5915, 121.0965], 18);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 21,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(usvMap);
-    usvIcon    = L.circleMarker([0, 0], { radius: 8, color: '#FF3555', fillColor: '#FF3555', fillOpacity: 1, weight: 3 }).addTo(usvMap);
-    route      = L.polyline([], { color: '#00E5B4', weight: 2.5, opacity: .85 }).addTo(usvMap);
-    targetLine = L.polyline([], { color: '#FFB627', weight: 2, dashArray: '6,10', opacity: .8 }).addTo(usvMap);
-    usvMap.on('click', e => {
-      fetch(`/addWP?lat=${e.latlng.lat}&lng=${e.latlng.lng}`).then(() => { updateWaypointMarkers(); updatePath(); });
-    });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 21, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(usvMap);
+    usvIcon    = L.circleMarker([0,0], { radius:9, color:'#EF4444', fillColor:'#EF4444', fillOpacity:1, weight:3 }).addTo(usvMap);
+    route      = L.polyline([], { color:'#00c6ff', weight:2.5, opacity:.88 }).addTo(usvMap);
+    targetLine = L.polyline([], { color:'#f5c842', weight:2, dashArray:'6,10', opacity:.82 }).addTo(usvMap);
+    usvMap.on('click', e => { fetch(`/addWP?lat=${e.latlng.lat}&lng=${e.latlng.lng}`).then(() => { updateWaypointMarkers(); updatePath(); }); });
     updatePath(); updateWaypointMarkers();
   }
 
-  /* ══════════════════════════════
-     TELEMETRY POLL (500 ms)
-  ══════════════════════════════ */
   setInterval(() => {
     fetch('/data').then(r => r.json()).then(d => {
-      let hasFix = (d.gpsValid == 1) || (d.lat != 0 && d.lng != 0);
+      let hasFix = (d.gpsValid==1)||(d.lat!=0&&d.lng!=0);
       let latStr = hasFix ? d.lat.toFixed(6) : '---';
       let lonStr = hasFix ? d.lng.toFixed(6) : '---';
       let inten  = d.intensity || 0;
-
-      /* Navigation tab metrics */
-      setText('lat2',       latStr);
-      setText('lon2',       lonStr);
-      setText('head2',       d.head.toFixed(1)       + "°");
-      setText('tbrng2',      d.tbrng.toFixed(1)      + "°");
-      setText('relBearing2', d.relBearing.toFixed(1) + "°");
-      setText('dist2',       d.dist.toFixed(1)       + "m");
-      setText('wp2',        "Node " + (d.wp + 1));
+      setText('lat2', latStr); setText('lon2', lonStr);
+      setText('head2',       d.head.toFixed(1)+"°");
+      setText('tbrng2',      d.tbrng.toFixed(1)+"°");
+      setText('relBearing2', d.relBearing.toFixed(1)+"°");
+      setText('dist2',       d.dist.toFixed(1)+"m");
+      setText('wp2',        "Node "+(d.wp+1));
       setText('direction2',  d.direction);
-      setText('intensity2',  inten + "%");
-      setText('xte2',        d.xte.toFixed(1)        + "m");
-      let iF2 = document.getElementById('intensityFill2');
-      if (iF2) iF2.style.width = inten + '%';
-
-      let error = d.tbrng - d.head;
-      if (error >  180) error -= 360;
-      if (error < -180) error += 360;
-      setText('err2', error.toFixed(1) + "°");
-
-      /* Compass overlay (USV tab) */
-      setText('head',  d.head.toFixed(1)  + "°");
-      setText('tbrng', d.tbrng.toFixed(1) + "°");
-      let needle  = document.getElementById('compassNeedle');
-      if (needle)  needle.setAttribute('transform',  `rotate(${d.head},  80, 80)`);
-      let ctarget = document.getElementById('compassTarget');
-      if (ctarget) ctarget.setAttribute('transform', `rotate(${d.tbrng}, 80, 80)`);
-
+      setText('intensity2',  inten+"%");
+      setText('xte2',        d.xte.toFixed(1)+"m");
+      let iF2=document.getElementById('intensityFill2'); if(iF2) iF2.style.width=inten+'%';
+      let error=d.tbrng-d.head; if(error>180) error-=360; if(error<-180) error+=360;
+      setText('err2', error.toFixed(1)+"°");
+      setText('head',  d.head.toFixed(1)+"°");
+      setText('tbrng', d.tbrng.toFixed(1)+"°");
+      let needle=document.getElementById('compassNeedle'); if(needle) needle.setAttribute('transform',`rotate(${d.head},80,80)`);
+      let ctarget=document.getElementById('compassTarget'); if(ctarget) ctarget.setAttribute('transform',`rotate(${d.tbrng},80,80)`);
       createBearingVisual(d.relBearing);
-
-      let total = Math.max(waypointMarkers.length, d.wp + 1);
+      let total=Math.max(waypointMarkers.length, d.wp+1);
       renderNodeDots(d.wp, total);
-      setText('wpProgress', `Node ${d.wp + 1} / ${waypointMarkers.length || '?'}`);
-
-      /* Sensor data */
-      setText('waterTemp', d.waterTemp ? d.waterTemp.toFixed(2) + " °C" : "---");
-      setText('waterPH',   d.waterPH   ? d.waterPH.toFixed(2)           : "---");
-      setText('waterTDS',  d.waterTDS  ? Math.round(d.waterTDS) + " ppm": "---");
-      if (d.hmRiskLevel)   setText('hmRiskLevel',   d.hmRiskLevel);
-      if (d.hmRiskScore)   setText('hmRiskScore',   "Score: " + d.hmRiskScore + "/100");
-      if (d.hmRiskReasons && Array.isArray(d.hmRiskReasons))
-        setText('hmRiskReasons', d.hmRiskReasons.join(' · '));
-
-      /* Clock */
+      setText('wpProgress',`Node ${d.wp+1} / ${waypointMarkers.length||'?'}`);
+      let sats = d.gpsSats || 0;
+      let gpsTag = document.getElementById('gpsTagLabel');
+      if (gpsTag) gpsTag.innerText = hasFix ? `GPS Fixed · ${sats} satellites` : 'GPS: No Fix';
+      let fix2 = document.getElementById('gpsFix2'); if (fix2) fix2.innerText = hasFix ? 'Fixed' : 'No Fix';
+      let sats2 = document.getElementById('gpsSats2'); if (sats2) sats2.innerText = sats;
+      setText('waterTemp', d.waterTemp ? d.waterTemp.toFixed(2)+" °C" : "---");
+      setText('waterPH',   d.waterPH   ? d.waterPH.toFixed(2)         : "---");
+      setText('waterTDS',  d.waterTDS  ? Math.round(d.waterTDS)+" ppm": "---");
+      if(d.hmRiskLevel)   setText('hmRiskLevel', d.hmRiskLevel);
+      if(d.hmRiskScore)   setText('hmRiskScore', "Score: "+d.hmRiskScore+"/100");
+      if(d.hmRiskReasons && Array.isArray(d.hmRiskReasons)) setText('hmRiskReasons', d.hmRiskReasons.join(' · '));
       document.getElementById('time').innerText = new Date().toLocaleTimeString();
-
-      /* Throttle sync */
-      if (d.thrL && !throttleDragging) { setText('thrLeftVal',  d.thrL + " µs"); document.getElementById('leftThrottle').value  = d.thrL; }
-      if (d.thrR && !throttleDragging) { setText('thrRightVal', d.thrR + " µs"); document.getElementById('rightThrottle').value = d.thrR; }
-      if (d.manual !== undefined) setText('manualOverrideVal', d.manual ? "ON" : "OFF");
-      if (d.servoOn !== undefined) document.getElementById('servoToggle').checked = (d.servoOn == 1);
-
-      /* Map marker + auto-zoom */
-      if (hasFix) {
-        usvIcon.setLatLng([d.lat, d.lng]);
-        if (autoZoomEnabled) centerAndZoom(19);
-        else if (!initialZoomDone && d.lat != 0) { centerAndZoom(18); initialZoomDone = true; }
-        if (d.tbrng > 0 && d.wp >= 0) {
-          fetch('/path').then(r => r.json()).then(pathData => {
-            if (pathData[d.wp]) targetLine.setLatLngs([[d.lat, d.lng], [pathData[d.wp].lat, pathData[d.wp].lng]]);
-          });
-        }
+      if(d.thrL&&!throttleDragging){setText('thrLeftVal',d.thrL+" µs");document.getElementById('leftThrottle').value=d.thrL;}
+      if(d.thrR&&!throttleDragging){setText('thrRightVal',d.thrR+" µs");document.getElementById('rightThrottle').value=d.thrR;}
+      if(d.manual!==undefined) setText('manualOverrideVal', d.manual?"ON":"OFF");
+      if(d.servoOn!==undefined) document.getElementById('servoToggle').checked=(d.servoOn==1);
+      if(hasFix){
+        usvIcon.setLatLng([d.lat,d.lng]);
+        if(autoZoomEnabled) centerAndZoom(19);
+        else if(!initialZoomDone&&d.lat!=0){centerAndZoom(18);initialZoomDone=true;}
+        if(d.tbrng>0&&d.wp>=0){fetch('/path').then(r=>r.json()).then(pd=>{if(pd[d.wp]) targetLine.setLatLngs([[d.lat,d.lng],[pd[d.wp].lat,pd[d.wp].lng]])});}
       }
-
-      /* Status strings */
-      let loraStr = (d.rxAge && d.rxAge < 2000) ? `OK · ${d.rxAge}ms` : 'LOST';
-      let gpsStr  = hasFix ? `FIXED · ${d.gpsSats || 0}sat` : 'NO FIX';
-      setText('loraStat',   `LoRa: ${loraStr}`);
-      setText('gpsStatus',  `GPS: ${gpsStr}`);
-      setText('loraStatMob', loraStr);
-      setText('gpsStatMob',  gpsStr);
-
-    }).catch(e => console.warn(e));
+      let loraStr=(d.rxAge&&d.rxAge<2000)?`OK · ${d.rxAge}ms`:'LOST';
+      let gpsStr=hasFix?`Fixed · ${d.gpsSats||0}sat`:'No Fix';
+      setText('loraStat',`LoRa: ${loraStr}`); setText('gpsStatus',`GPS: ${gpsStr}`);
+    }).catch(e=>console.warn(e));
   }, 500);
 
-  /* ══════════════════════════════
-     NANOPLASTIC
-  ══════════════════════════════ */
   const API_BASE = '';
   let captureInProgress = false;
 
-  function setCaptureStatus(msg, isError = false) {
-    let el = document.getElementById('captureStatus');
-    if (!el) return;
-    el.innerText   = msg;
-    el.style.color = isError ? 'var(--red)' : 'var(--text-sub)';
+  function setCaptureStatus(msg, isError=false) {
+    let el=document.getElementById('captureStatus'); if(!el) return;
+    el.innerText=msg; el.style.color=isError?'var(--red)':'var(--text-sub)';
   }
-
   async function triggerCapture() {
-    if (captureInProgress) return;
-    let btn = document.getElementById('captureBtn');
-    if (!btn) return;
-    btn.disabled = true; captureInProgress = true;
-    setCaptureStatus('CAPTURING');
+    if(captureInProgress) return;
+    let btn=document.getElementById('captureBtn'); if(!btn) return;
+    btn.disabled=true; captureInProgress=true; setCaptureStatus('CAPTURING');
     try {
-      let res = await fetch(`${API_BASE}/trigger_capture`, { method: 'POST' });
-      if (res.status === 202) { await pollCaptureStatus(); }
-      else {
-        let err = await res.json();
-        setCaptureStatus(`Error: ${err.error || 'Unknown'}`, true);
-        btn.disabled = false; captureInProgress = false;
-      }
-    } catch (e) {
-      setCaptureStatus('Request failed', true);
-      btn.disabled = false; captureInProgress = false;
-    }
+      let res=await fetch(`${API_BASE}/trigger_capture`,{method:'POST'});
+      if(res.status===202){await pollCaptureStatus();}
+      else{let err=await res.json();setCaptureStatus(`Error: ${err.error||'Unknown'}`,true);btn.disabled=false;captureInProgress=false;}
+    } catch(e){setCaptureStatus('Request failed',true);btn.disabled=false;captureInProgress=false;}
   }
-
   async function pollCaptureStatus() {
-    let attempts = 0, maxAttempts = 120;
-    return new Promise(resolve => {
-      let interval = setInterval(async () => {
+    let attempts=0,maxAttempts=120;
+    return new Promise(resolve=>{
+      let interval=setInterval(async()=>{
         attempts++;
-        try {
-          let res  = await fetch(`${API_BASE}/api/capture_status`);
-          let data = await res.json();
-          if (!data.is_processing) {
-            clearInterval(interval);
-            document.getElementById('captureBtn').disabled = false;
-            captureInProgress = false;
-            if (data.last_result)  { setCaptureStatus('✓ Complete'); await refreshAll(); }
-            else if (data.error)   { setCaptureStatus(`Failed: ${data.error}`, true); }
-            else                   { setCaptureStatus('No result', true); }
+        try{
+          let res=await fetch(`${API_BASE}/api/capture_status`);
+          let data=await res.json();
+          if(!data.is_processing){
+            clearInterval(interval);document.getElementById('captureBtn').disabled=false;captureInProgress=false;
+            if(data.last_result){setCaptureStatus('✓ Complete');await refreshAll();}
+            else if(data.error){setCaptureStatus(`Failed: ${data.error}`,true);}
+            else{setCaptureStatus('No result',true);}
             resolve();
           } else {
-            setCaptureStatus(`PROCESSING (${data.elapsed_seconds || attempts}s)`);
-            if (attempts >= maxAttempts) {
-              clearInterval(interval);
-              document.getElementById('captureBtn').disabled = false;
-              captureInProgress = false;
-              setCaptureStatus('Timeout', true); resolve();
-            }
+            setCaptureStatus(`Processing (${data.elapsed_seconds||attempts}s)`);
+            if(attempts>=maxAttempts){clearInterval(interval);document.getElementById('captureBtn').disabled=false;captureInProgress=false;setCaptureStatus('Timeout',true);resolve();}
           }
-        } catch (e) {
-          clearInterval(interval);
-          document.getElementById('captureBtn').disabled = false;
-          captureInProgress = false;
-          setCaptureStatus('Poll error', true); resolve();
-        }
-      }, 1000);
+        } catch(e){clearInterval(interval);document.getElementById('captureBtn').disabled=false;captureInProgress=false;setCaptureStatus('Poll error',true);resolve();}
+      },1000);
     });
   }
-
   async function fetchStats() {
-    try {
-      let stats = await (await fetch(`${API_BASE}/api/stats`)).json();
-      setText('totalSamples',  stats.total_samples   || 0);
-      setText('avgParticles',  stats.avg_particles   || 0);
-      setText('highRiskCount', stats.high_risk_count || 0);
-      setText('maxParticles',  stats.max_particles   || 0);
-    } catch (e) { console.warn(e); }
+    try{let stats=await(await fetch(`${API_BASE}/api/stats`)).json();setText('totalSamples',stats.total_samples||0);setText('avgParticles',stats.avg_particles||0);setText('highRiskCount',stats.high_risk_count||0);setText('maxParticles',stats.max_particles||0);}catch(e){console.warn(e);}
   }
-
   async function fetchLatestImage() {
-    try {
-      let data  = await (await fetch(`${API_BASE}/api/latest_image`)).json();
-      let img   = document.getElementById('latestImage');
-      let noImg = document.getElementById('noImageMessage');
-      if (data.filename) {
-        img.src = `/images/processed/${data.filename}?t=${Date.now()}`;
-        img.style.display = 'block';
-        if (noImg) noImg.style.display = 'none';
+    try{
+      let data=await(await fetch(`${API_BASE}/api/latest_image`)).json();
+      let img=document.getElementById('latestImage'),noImg=document.getElementById('noImageMessage');
+      if(data.filename){
+        img.src=`/images/processed/${data.filename}?t=${Date.now()}`;
+        img.style.display='block';
+        if(noImg) noImg.style.display='none';
       } else {
-        img.style.display = 'none';
-        if (noImg) noImg.style.display = 'flex';
+        img.style.display='none';
+        if(noImg) noImg.style.display='flex';
       }
-    } catch (e) { console.warn(e); }
+    }catch(e){console.warn(e);}
   }
-
   async function fetchDetections() {
-    try {
-      let detections = await (await fetch(`${API_BASE}/api/detections`)).json();
-      if (detections.length > 0) {
-        let latest = detections[detections.length - 1];
-        setText('particleCount', latest.particle_count || 0);
-        setText('concentration', latest.estimated_concentration_ug_L ? latest.estimated_concentration_ug_L + " µg/L" : '---');
-        setText('nanointensity', latest.mean_intensity  || '---');
-        setText('confidence',    latest.avg_confidence  ? latest.avg_confidence + '%' : '---');
-        let risk   = latest.risk_level || 'LOW';
-        let riskEl = document.getElementById('riskLevel');
-        if (riskEl) {
-          riskEl.innerText   = risk;
-          riskEl.style.color = risk === 'HIGH' ? 'var(--red)' : risk === 'MEDIUM' ? 'var(--amber)' : 'var(--green)';
-        }
-        let tbody  = document.getElementById('historyBody');
-        let recent = detections.slice(-20).reverse();
-        tbody.innerHTML = recent.length
-          ? recent.map(d => {
-              let t  = d.timestamp ? d.timestamp.substr(8,6).replace(/(..)(..)(..)/,'$1:$2:$3') : '--:--:--';
-              let rc = (d.risk_level || 'low').toLowerCase();
-              return `<tr>
-                <td>${t}</td>
-                <td>${d.particle_count||0}</td>
-                <td>${d.estimated_concentration_ug_L||'?'}</td>
-                <td>${d.mean_intensity||'---'}</td>
-                <td>${d.avg_confidence ? d.avg_confidence+'%' : '---'}</td>
-                <td><span class="badge badge-${rc}">${d.risk_level||'LOW'}</span></td>
-              </tr>`;
-            }).join('')
-          : '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:1.5rem;">No data yet</td></tr>';
+    try{
+      let detections=await(await fetch(`${API_BASE}/api/detections`)).json();
+      if(detections.length>0){
+        let latest=detections[detections.length-1];
+        setText('particleCount',latest.particle_count||0);
+        setText('concentration',latest.estimated_concentration_ug_L?latest.estimated_concentration_ug_L+" µg/L":'---');
+        setText('nanointensity',latest.mean_intensity||'---');
+        setText('confidence',latest.avg_confidence?latest.avg_confidence+'%':'---');
+        let risk=latest.risk_level||'LOW';
+        let riskEl=document.getElementById('riskLevel');
+        if(riskEl){riskEl.innerText=risk;riskEl.style.color=risk==='HIGH'?'var(--red)':risk==='MEDIUM'?'var(--amber)':'var(--emerald)';}
+        let tbody=document.getElementById('historyBody');
+        let recent=detections.slice(-20).reverse();
+        tbody.innerHTML=recent.length
+          ?recent.map(d=>{let t=d.timestamp?d.timestamp.substr(8,6).replace(/(..)(..)(..)/,'$1:$2:$3'):'--:--:--';let rc=(d.risk_level||'low').toLowerCase();return`<tr><td>${t}</td><td>${d.particle_count||0}</td><td>${d.estimated_concentration_ug_L||'?'}</td><td>${d.mean_intensity||'---'}</td><td>${d.avg_confidence?d.avg_confidence+'%':'---'}</td><td><span class="badge badge-${rc}">${d.risk_level||'LOW'}</span></td></tr>`;}).join('')
+          :'<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:1.5rem;">No data yet</td></tr>';
       }
-    } catch (e) { console.warn(e); }
+    }catch(e){console.warn(e);}
   }
+  async function refreshAll(){await fetchStats();await fetchLatestImage();await fetchDetections();}
+  document.getElementById('captureBtn')?.addEventListener('click',triggerCapture);
+  refreshAll(); setInterval(refreshAll,5000);
 
-  async function refreshAll() { await fetchStats(); await fetchLatestImage(); await fetchDetections(); }
-  document.getElementById('captureBtn')?.addEventListener('click', triggerCapture);
-  refreshAll();
-  setInterval(refreshAll, 5000);
-
-  /* ══════════════════════════════
-     HEAVY METAL LOG
-  ══════════════════════════════ */
   async function fetchHeavyMetalLog() {
-    try {
-      let data  = await (await fetch(`${API_BASE}/api/heavy_metal_log`)).json();
+    try{
+      let data = await (await fetch(`${API_BASE}/api/heavy_metal_log`)).json();
       let tbody = document.getElementById('hmLogBody');
       if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-dim);">No log entries yet</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-dim);">No log entries yet</td></tr>';
         return;
       }
       tbody.innerHTML = data.map(r => {
         let rc = (r.Risk || '').toLowerCase();
         return `<tr>
-          <td>${r.Date}</td><td>${r.Time}</td>
-          <td>${r['TDS (ppm)']}</td><td>${r.pH}</td><td>${r['Temp (°C)']}</td>
-          <td><span class="badge badge-${rc}">${r.Risk}</span></td>
-        </tr>`;
+                  <td>${r.Date}</td>
+                  <td>${r.Time}</td>
+                  <td>${r['TDS (ppm)']}</td>
+                  <td>${r.pH}</td>
+                  <td>${r['Temp (°C)']}</td>
+                  <td>${r.WQI || ''}</td>
+                  <td><span class="badge badge-${rc}">${r.Risk}</span></td>
+                </tr>`;
       }).join('');
-    } catch (e) { console.warn(e); }
+    } catch(e) { console.warn(e); }
   }
-  fetchHeavyMetalLog();
-  setInterval(fetchHeavyMetalLog, 30000);
+  fetchHeavyMetalLog(); setInterval(fetchHeavyMetalLog,30000);
 </script>
 </body>
 </html>
