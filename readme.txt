@@ -10,3 +10,5 @@ python app.py
 connect rpi and server in the same network first.
 then find the rpi IP address.
 RASPI_URL = os.environ.get("RASPI_URL", "http://192.168.1.100:8000")  # change to your Pi IP
+
+check
