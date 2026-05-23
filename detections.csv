@@ -180,3 +180,10 @@ timestamp,particle_count,mean_intensity,avg_confidence,estimated_concentration_u
 20260519_121527_006,0,0.0,0.0,0.0,LOW,combined
 20260519_121609_866,0,0.0,0.0,0.0,LOW,combined
 20260520_131007_213,4,47.461,90.5,0.0,LOW,combined
+20260522_185649_640,0,0.0,0.0,0.0,LOW,combined
+20260522_203927_286,1,62.0,50.0,0.0,LOW,combined
+20260523_144707_528,77,121.873,52.7,0.16,MEDIUM,combined
+20260523_151824_167,0,0.0,0.0,0.0,LOW,combined
+20260523_152221_297,0,0.0,0.0,0.0,LOW,combined
+20260523_152413_740,0,0.0,0.0,0.0,LOW,combined
+20260523_152830_847,0,0.0,0.0,0.0,LOW,combined

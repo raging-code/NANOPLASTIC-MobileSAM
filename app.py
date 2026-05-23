@@ -19,7 +19,10 @@ from mobile_sam import sam_model_registry, SamAutomaticMaskGenerator
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Raspberry Pi USV server address
-RASPI_URL = os.environ.get("RASPI_URL", "http://192.168.0.100:8000/")
+RASPI_URL = os.environ.get("RASPI_URL", "http://172.20.10.10:8000/")
+
+# ESP32 direct connection
+ESP32_URL = os.environ.get("ESP32_URL", "http://172.20.10.2")
 
 # Nanoplastic configuration
 CAMERA_INDEX = int(os.environ.get('CAMERA_INDEX', 0))
@@ -37,6 +40,12 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 os.makedirs(CONFIG_FOLDER, exist_ok=True)
 
+# Laser state tracking
+laser_state = {
+    'is_on': False,
+    'angle': 0
+}
+
 # ==================== FLASK APP ====================
 app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
@@ -50,7 +59,7 @@ frame_ready = threading.Event()
 stop_camera = threading.Event()
 camera_available = False
 camera_error_count = 0
-MAX_CAMERA_ERRORS = 10
+MAX_CAMERA_ERRORS = 2   # CHANGED: from 10 to 2 for faster fallback
 
 sam = None
 mask_generator = None
@@ -131,7 +140,7 @@ processing_status = {
     "last_result": None,
     "error": None,
     "start_time": None,
-    "processing_timeout": 120
+    "processing_timeout": 60
 }
 
 # ---------- Helper to convert any frame to 3-channel BGR ----------
@@ -222,7 +231,8 @@ def camera_worker():
                     with camera_lock:
                         latest_frame = mock
                     frame_ready.set()
-                time.sleep(3)
+                # CHANGED: reduced sleep from 3 to 0.5 seconds for faster retry / fallback
+                time.sleep(0.5)
                 continue
             else:
                 camera_available = True
@@ -289,7 +299,7 @@ def get_latest_frame(timeout=5.0):
                 return latest_frame.copy()
     return None
 
-# --- detection functions with real confidence ---
+# --- detection functions ---
 def detect_blobs(image_gray, draw_on_image=None):
     inverted = 255 - image_gray
     keypoints = blob_detector.detect(inverted)
@@ -439,23 +449,18 @@ def estimate_concentration(particle_count, intensity):
     return concentrations[0]
 
 def process_capture_task():
+    """Background task for processing capture"""
     global processing_status
-    def timeout_handler():
-        with processing_lock:
-            if processing_status["is_processing"]:
-                processing_status["is_processing"] = False
-                processing_status["error"] = "Processing timeout (exceeded 120 seconds)"
-    timer = threading.Timer(processing_status["processing_timeout"], timeout_handler)
-    timer.start()
     try:
         start_total = time.time()
-        frame = get_latest_frame(timeout=10.0)
+        # CHANGED: shorter timeout (2.0 instead of 10.0) so UI responds quickly
+        frame = get_latest_frame(timeout=2.0)
         if frame is None:
             with processing_lock:
                 processing_status["is_processing"] = False
                 processing_status["error"] = "No frame available from camera"
-            timer.cancel()
             return
+        
         if DETECTION_MODE == 'blob':
             particle_count, mean_intensity, avg_confidence, annotated = count_particles_blob_only(frame)
         elif DETECTION_MODE == 'sam':
@@ -464,7 +469,6 @@ def process_capture_task():
             particle_count, mean_intensity, avg_confidence, annotated = count_particles_combined(frame)
         concentration = estimate_concentration(particle_count, mean_intensity)
 
-        # Risk thresholds for 1 mL sample
         risk_level = 'HIGH' if particle_count > 100 else 'MEDIUM' if particle_count > 10 else 'LOW'
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
@@ -514,8 +518,7 @@ def process_capture_task():
         with processing_lock:
             processing_status["is_processing"] = False
             processing_status["error"] = str(e)
-    finally:
-        timer.cancel()
+            processing_status["last_result"] = None
 
 # ==================== PROXY FUNCTIONS TO RASPBERRY PI ====================
 def proxy_to_pi(endpoint, method='GET', data=None, params=None):
@@ -534,7 +537,6 @@ def proxy_to_pi(endpoint, method='GET', data=None, params=None):
 # ==================== HEAVY METAL LOGGING ====================
 latest_telemetry = None
 
-# ---------- Fuzzy logic from Raspberry Pi (exact copy) ----------
 def _to_float(v) -> float | None:
     try:
         if v is None:
@@ -634,27 +636,21 @@ def heavy_metal_risk(ph: float | None, tds_ppm: float | None, temp_c: float | No
         reasons = ["combination indicates elevated risk"]
     return {"score": round(float(score), 1), "level": level, "reasons": reasons}
 
-# ---------- One-time migration of existing CSV ----------
 def migrate_heavy_metal_log():
     csv_path = os.path.join(BASE_DIR, 'heavy_metal_log.csv')
     if not os.path.exists(csv_path):
         return
-    # read all rows
     with open(csv_path, 'r', newline='') as f:
         reader = csv.reader(f)
         rows = list(reader)
     if not rows:
         return
     header = rows[0]
-    # check if already migrated (WQI column exists)
     if 'WQI' in header:
-        print("Heavy metal log already has WQI column, skipping migration.")
         return
     new_header = header + ['WQI'] if 'WQI' not in header else header
     new_rows = [new_header]
-    # parse date and time, convert date to DD/MM/YY
     date_formats = ['%d/%m/%Y', '%Y-%m-%d', '%d/%m/%y']
-    time_formats = ['%H:%M:%S', '%H:%M']  # seconds may exist
     for row in rows[1:]:
         if not row:
             continue
@@ -663,7 +659,6 @@ def migrate_heavy_metal_log():
         tds_str = row[2].strip()
         ph_str = row[3].strip()
         temp_str = row[4].strip()
-        # Convert date
         new_date = date_str
         dt = None
         for fmt in date_formats:
@@ -673,11 +668,9 @@ def migrate_heavy_metal_log():
             except ValueError:
                 continue
         if dt is None:
-            # fallback: keep original
             new_date = date_str
         else:
             new_date = dt.strftime('%d/%m/%y')
-        # parse TDS, pH, temp
         tds = _to_float(tds_str)
         ph = _to_float(ph_str)
         temp = _to_float(temp_str)
@@ -685,15 +678,11 @@ def migrate_heavy_metal_log():
         wqi = risk['score'] if risk['score'] is not None else ''
         new_row = [new_date, time_str, tds_str, ph_str, temp_str, row[5], str(wqi)]
         new_rows.append(new_row)
-    # overwrite file
     with open(csv_path, 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerows(new_rows)
-    print("Heavy metal log migrated: added WQI, dates converted to DD/MM/YY.")
 
-# ==================== HEAVY METAL LOGGER (updated) ====================
 def heavy_metal_logger():
-    # Ensure the file has the new header if it doesn't exist yet
     csv_file = os.path.join(BASE_DIR, 'heavy_metal_log.csv')
     write_header = not os.path.isfile(csv_file)
     while True:
@@ -704,7 +693,6 @@ def heavy_metal_logger():
             water_tds = latest_telemetry.get('waterTDS', '')
             risk_level = latest_telemetry.get('hmRiskLevel', '')
             wqi_score = latest_telemetry.get('hmRiskScore', '')
-            # If score missing, compute from raw values
             if wqi_score == '' or wqi_score is None:
                 ph = _to_float(water_ph)
                 tds = _to_float(water_tds)
@@ -725,10 +713,6 @@ def heavy_metal_logger():
                 writer.writerow([date_str, time_str, water_tds, water_ph, water_temp, risk_level, wqi_score])
 
 # ==================== FLASK ROUTES ====================
-# ... (existing routes unchanged, except /data endpoint which we already use for telemetry)
-# We will not repeat all routes to save space, but they remain exactly the same.
-# Below we include the full list to keep the file complete.
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -812,6 +796,62 @@ def proxy_cmd():
     content, status, ctype = proxy_to_pi('/cmd', method='POST', data=data)
     return Response(content, status=status, mimetype=ctype)
 
+# ---------- FIXED: Laser control with fresh connection each time ----------
+@app.route('/laser', methods=['GET'])
+def laser_control():
+    """
+    Control laser by sending HTTP request directly to ESP32
+    Each request creates a new connection to avoid stale connections
+    """
+    global laser_state
+    state = request.args.get('state', '').lower()
+    
+    if state not in ['on', 'off']:
+        return jsonify({'status': 'error', 'message': 'Invalid state. Use "on" or "off"'}), 400
+    
+    # Create a fresh session for each request to avoid stale connections
+    session = requests.Session()
+    # Set aggressive timeouts
+    adapter = requests.adapters.HTTPAdapter(
+        pool_connections=1,
+        pool_maxsize=1,
+        max_retries=0,
+        pool_block=False
+    )
+    session.mount('http://', adapter)
+    
+    try:
+        cmd = 'laser_on' if state == 'on' else 'laser_off'
+        angle = 15 if state == 'on' else 0
+        
+        # Use a very short timeout for responsiveness
+        resp = session.get(f"{ESP32_URL}/control?cmd={cmd}", timeout=1)
+        
+        if resp.status_code == 200:
+            laser_state['is_on'] = (state == 'on')
+            laser_state['angle'] = angle
+            return jsonify({'status': 'ok', 'laser_state': state, 'angle': angle})
+        else:
+            return jsonify({'status': 'error', 'message': f'ESP32 returned status {resp.status_code}'}), 500
+            
+    except requests.exceptions.Timeout:
+        return jsonify({'status': 'error', 'message': 'ESP32 connection timed out'}), 500
+    except requests.exceptions.ConnectionError:
+        return jsonify({'status': 'error', 'message': 'Cannot connect to ESP32. Check WiFi/power.'}), 500
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        session.close()
+
+@app.route('/api/laser_status', methods=['GET'])
+def laser_status():
+    """Get current laser status"""
+    global laser_state
+    return jsonify({
+        'laser_on': laser_state['is_on'],
+        'angle': laser_state['angle']
+    })
+
 # ---------- Nanoplastic routes ----------
 @app.route('/images/processed/<filename>')
 def serve_processed(filename):
@@ -828,7 +868,8 @@ def camera_status():
 @app.route('/capture', methods=['POST', 'GET'])
 def capture_and_analyze():
     try:
-        frame = get_latest_frame()
+        # CHANGED: explicit shorter timeout for sync capture too
+        frame = get_latest_frame(timeout=2.0)
         if frame is None:
             return jsonify({'status': 'error', 'error': 'No frame available'}), 500
         if DETECTION_MODE == 'blob':
@@ -838,9 +879,7 @@ def capture_and_analyze():
         else:
             particle_count, mean_intensity, avg_confidence, annotated = count_particles_combined(frame)
         concentration = estimate_concentration(particle_count, mean_intensity)
-
         risk_level = 'HIGH' if particle_count > 100 else 'MEDIUM' if particle_count > 10 else 'LOW'
-
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
         raw_path = os.path.join(app.config['UPLOAD_FOLDER'], f"raw_{timestamp}.jpg")
         proc_path = os.path.join(PROCESSED_FOLDER, f"processed_{timestamp}.jpg")
@@ -880,15 +919,23 @@ def capture_and_analyze():
         traceback.print_exc()
         return jsonify({'status': 'error', 'error': str(e)}), 500
 
+# FIXED: Simplified trigger_capture - no reset needed, just check and start
 @app.route('/trigger_capture', methods=['GET', 'POST'])
 def trigger_capture_async():
     with processing_lock:
+        # If already processing, force reset and allow new capture
         if processing_status["is_processing"]:
-            return jsonify({'status': 'error', 'error': 'Capture already in progress'}), 409
+            processing_status["is_processing"] = False
+            processing_status["error"] = None
+            processing_status["last_result"] = None
+            processing_status["start_time"] = None
+        
+        # Start new processing
         processing_status["is_processing"] = True
         processing_status["error"] = None
         processing_status["start_time"] = time.time()
         processing_status["last_result"] = None
+    
     thread = threading.Thread(target=process_capture_task, daemon=True)
     thread.start()
     return jsonify({'status': 'accepted', 'message': 'Capture started'}), 202
@@ -907,12 +954,13 @@ def get_capture_status():
 
 @app.route('/api/reset_processing', methods=['POST'])
 def reset_processing():
+    """Force reset processing status"""
     with processing_lock:
-        was_processing = processing_status["is_processing"]
         processing_status["is_processing"] = False
-        processing_status["error"] = "Manually reset"
+        processing_status["error"] = None
         processing_status["last_result"] = None
-    return jsonify({'status': 'ok', 'was_processing': was_processing})
+        processing_status["start_time"] = None
+    return jsonify({'status': 'ok', 'message': 'Processing reset successfully'})
 
 @app.route('/api/detections')
 def get_detections():
@@ -988,7 +1036,6 @@ def blob_params_route():
         blob_detector = create_blob_detector(blob_params)
         return jsonify({'status': 'ok', 'params': blob_params})
 
-# ---------- Existing /data proxy (unchanged) ----------
 @app.route('/data')
 def proxy_data():
     content, status, ctype = proxy_to_pi('/data')
@@ -1001,7 +1048,6 @@ def proxy_data():
             pass
     return Response(content, status=status, mimetype=ctype)
 
-# ---------- New endpoint to serve the heavy metal log ----------
 @app.route('/api/heavy_metal_log')
 def api_heavy_metal_log():
     csv_file = os.path.join(BASE_DIR, 'heavy_metal_log.csv')
@@ -1018,11 +1064,10 @@ def api_heavy_metal_log():
                 'pH': row.get('pH', ''),
                 'Temp (°C)': row.get('Temp (°C)', ''),
                 'Risk': row.get('Risk', ''),
-                'WQI': row.get('WQI', '')   # <-- added
+                'WQI': row.get('WQI', '')
             })
     return jsonify(data[-100:])
 
-# ---------- New endpoint for latest image (unchanged) ----------
 @app.route('/api/latest_image')
 def api_latest_image():
     if not os.path.exists(PROCESSED_FOLDER):
@@ -1043,12 +1088,11 @@ if __name__ == '__main__':
     print("=" * 60)
     print("Unified Server: USV (proxied) + Nanoplastic Detection")
     print(f"Proxying USV requests to {RASPI_URL}")
+    print(f"ESP32 Laser Controller at {ESP32_URL}")
     print(f"Detection mode: {DETECTION_MODE}")
     print("=" * 60)
 
-    # Migrate existing heavy_metal_log.csv before starting the logger
     migrate_heavy_metal_log()
-
     start_camera_thread()
 
     hm_thread = threading.Thread(target=heavy_metal_logger, daemon=True)
